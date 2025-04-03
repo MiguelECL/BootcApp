@@ -3,9 +3,12 @@ package com.mcastillo.productsManagement.service;
 import com.amazonaws.services.sqs.AmazonSQSRequester;
 import com.amazonaws.services.sqs.AmazonSQSRequesterClientBuilder;
 import com.amazonaws.services.sqs.model.Message;
+import com.amazonaws.services.sqs.model.MessageAttributeValue;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -21,8 +24,14 @@ public class ProductsManagementService {
   private final AmazonSQSRequester sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
 
   public void getProducts() throws TimeoutException {
+    Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+    messageAttributes.put("action", new MessageAttributeValue()
+        .withDataType("String")
+        .withStringValue("GET"));
+
     SendMessageRequest request = new SendMessageRequest()
       .withQueueUrl(queueURL)
+      .withMessageAttributes(messageAttributes)
       .withMessageBody("Test");
 
     //  - creates a temporary queue
