@@ -3,6 +3,8 @@ package com.mcastillo.productsManagement.controller;
 import com.mcastillo.productsManagement.service.ProductsManagementService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.concurrent.TimeoutException;
+
 @RestController
 @CrossOrigin
 public class ProductsManagementController {
@@ -12,7 +14,11 @@ public class ProductsManagementController {
   @GetMapping("/products")
   public String getProducts() {
 
-    service.getProducts();
+    try {
+      service.getProducts();
+    } catch (TimeoutException e){
+      System.out.println("TimeoutException: " + e.getMessage());
+    }
     return "Hello World";
   }
 

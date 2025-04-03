@@ -1,63 +1,50 @@
 package com.mcastillo.productsManagement.service;
 
-import com.amazonaws.services.sqs.model.SendMessageResult;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.converter.json.GsonBuilderUtils;
-import org.springframework.stereotype.Service;
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.AmazonSQSRequester;
+import com.amazonaws.services.sqs.AmazonSQSRequesterClientBuilder;
+import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
-import com.amazonaws.services.sqs.model.AmazonSQSException;
-import com.amazonaws.services.sqs.model.SendMessageBatchRequest;
+import org.springframework.stereotype.Service;
 
-import java.sql.SQLOutput;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 ///  This service sends messages through SQS to the products service.
 @Service
 public class ProductsManagementService {
 
+  // The queue URL is set in the environment variable QUEUE_URL
   String queueURL = System.getenv("QUEUE_URL");
-  final AmazonSQS sqs = AmazonSQSClientBuilder.defaultClient();
 
-  public void getProducts(){
-    SendMessageRequest msgRequest = new SendMessageRequest()
+  // AmazonSQSRequester is class that that allows for two-way communication with virtual queues
+  // It creates a temporary queue for each response
+  private final AmazonSQSRequester sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
+
+  public void getProducts() throws TimeoutException {
+    SendMessageRequest request = new SendMessageRequest()
       .withQueueUrl(queueURL)
-      .withMessageBody("Test")
-      .withDelaySeconds(2);
+      .withMessageBody("Test");
 
-    SendMessageResult msgResult = sqs.sendMessage(msgRequest);
-    msgResult.getMessageId();
+    //  - creates a temporary queue
+    //  - attaches its URL as an attribute on the message
+    //  - sends the message
+    //  - receives the response from the temporary queue
+    //  - deletes the temporary queue
+    //  - returns the response
+
+    System.out.println("requesting response");
+    Message response;
+    response = sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+    System.out.println(response.getBody());
   }
 
   public void createProduct(){
-    SendMessageRequest msgRequest = new SendMessageRequest()
-      .withQueueUrl(queueURL)
-      .withMessageBody("Test")
-      .withDelaySeconds(2);
-
-    SendMessageResult msgResult = sqs.sendMessage(msgRequest);
-    msgResult.getMessageId();
   }
 
   public void updateProduct(){
-    SendMessageRequest msgRequest = new SendMessageRequest()
-      .withQueueUrl(queueURL)
-      .withMessageBody("Test")
-      .withDelaySeconds(2);
-
-    SendMessageResult msgResult = sqs.sendMessage(msgRequest);
-    msgResult.getMessageId();
   }
 
   public void deleteProduct(){
-    SendMessageRequest msgRequest = new SendMessageRequest()
-      .withQueueUrl(queueURL)
-      .withMessageBody("Test")
-      .withDelaySeconds(2);
-
-    SendMessageResult msgResult = sqs.sendMessage(msgRequest);
-    msgResult.getMessageId();
   }
 
 }
