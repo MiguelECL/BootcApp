@@ -5,8 +5,12 @@ import com.amazonaws.services.sqs.AmazonSQSRequesterClientBuilder;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mcastillo.Product;
 import org.springframework.stereotype.Service;
 
+import java.sql.Time;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -22,6 +26,7 @@ public class ProductsManagementService {
   // AmazonSQSRequester is class that that allows for two-way communication with virtual queues
   // It creates a temporary queue for each response
   private final AmazonSQSRequester sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
+  ObjectMapper objectMapper = new ObjectMapper();
 
   public String getProducts() throws TimeoutException {
     Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
@@ -47,10 +52,32 @@ public class ProductsManagementService {
     return response.getBody();
   }
 
-  public void createProduct(){
+  public void createProduct(Product product) throws TimeoutException, JsonProcessingException {
+    Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+    messageAttributes.put("action", new MessageAttributeValue()
+      .withDataType("String")
+      .withStringValue("POST"));
+
+    SendMessageRequest request = new SendMessageRequest()
+      .withQueueUrl(queueURL)
+      .withMessageAttributes(messageAttributes)
+      .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+
+    sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
   }
 
-  public void updateProduct(){
+  public void updateProduct(Product product) throws TimeoutException, JsonProcessingException {
+    Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+    messageAttributes.put("action", new MessageAttributeValue()
+      .withDataType("String")
+      .withStringValue("PUT"));
+
+    SendMessageRequest request = new SendMessageRequest()
+      .withQueueUrl(queueURL)
+      .withMessageAttributes(messageAttributes)
+      .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+
+    sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
   }
 
   public void deleteProduct(int id) throws TimeoutException{

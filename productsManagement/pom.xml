@@ -56,6 +56,12 @@
 			<version>1.12.774</version>
 			<type>jar</type>
 		</dependency>
+		<dependency>
+			<groupId>com.mcastillo</groupId>
+			<artifactId>commonLibrary</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+			<scope>compile</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

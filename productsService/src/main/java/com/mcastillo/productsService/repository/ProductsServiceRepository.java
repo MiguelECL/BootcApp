@@ -1,6 +1,8 @@
 package com.mcastillo.productsService.repository;
 
 import com.amazonaws.services.sqs.model.Message;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
 import com.mcastillo.productsService.configuration.Queries;
@@ -24,7 +26,7 @@ public class ProductsServiceRepository {
     JdbcTemplate jdbcTemplate;
 
     // Custom row mapper
-    public class ProductRowMapper implements RowMapper<Product> {
+    public static class ProductRowMapper implements RowMapper<Product> {
         @Override
         public Product mapRow(ResultSet rs, int row) throws SQLException {
             Product product = new Product();
@@ -42,12 +44,12 @@ public class ProductsServiceRepository {
         String action = message.getMessageAttributes().get("action").getStringValue();
         System.out.println(action);
         String response = "";
+        ObjectMapper objectMapper = new ObjectMapper();
 
         switch (action){
             case "GET":
 
                 List<Product> productList = jdbcTemplate.query(queries.getSelectAllProducts(), new ProductRowMapper());
-                ObjectMapper objectMapper = new ObjectMapper();
 
                 // serialize the list obtained from the database
                 try {
@@ -59,9 +61,41 @@ public class ProductsServiceRepository {
                 break;
 
             case "POST":
+                // Deserialize the product from the message body
+                Product product;
+                try {
+                    product = objectMapper.readValue(message.getBody(), Product.class);
+                    System.out.println("Creating product: " + product);
+                    jdbcTemplate.update(queries.getCreateProduct(),
+                            product.getName(),
+                            product.getDescription(),
+                            product.getPrice(),
+                            product.getExpirationDate());
+                    response = "Product created: " + product.getName();
+
+                } catch (Exception e){
+                    e.printStackTrace();
+                    response = "Error deserializing product from POST";
+                }
                 break;
 
             case "PUT":
+                // Deserialize the product from the message body
+                Product updatedProduct;
+                try {
+                    updatedProduct = objectMapper.readValue(message.getBody(), Product.class);
+                    jdbcTemplate.update(queries.getUpdateProduct(),
+                            updatedProduct.getName(),
+                            updatedProduct.getDescription(),
+                            updatedProduct.getPrice(),
+                            updatedProduct.getExpirationDate(),
+                            updatedProduct.getId());
+
+                    response = "Product updated: " + updatedProduct.getName();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    response = "Error deserializing product from PUT";
+                }
                 break;
 
             case "DELETE":

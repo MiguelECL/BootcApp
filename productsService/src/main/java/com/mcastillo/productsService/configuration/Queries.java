@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "queries")
 public class Queries {
     private String selectAllProducts;
-    private String insertProduct;
+    private String createProduct;
     private String updateProduct;
     private String deleteProduct;
 
@@ -19,12 +19,12 @@ public class Queries {
         this.selectAllProducts = selectAllProducts;
     }
 
-    public String getInsertProduct() {
-        return insertProduct;
+    public String getCreateProduct() {
+        return createProduct;
     }
 
-    public void setInsertProduct(String insertProduct) {
-        this.insertProduct = insertProduct;
+    public void setCreateProduct(String insertProduct) {
+        this.createProduct = insertProduct;
     }
 
     public String getUpdateProduct() {
