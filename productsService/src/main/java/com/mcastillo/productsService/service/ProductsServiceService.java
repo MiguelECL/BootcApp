@@ -54,10 +54,7 @@ public class ProductsServiceService {
 
     public void processMessage(Message message) {
         // Process the message
-        String action = message.getMessageAttributes().get("action").getStringValue();
-        System.out.println(action);
-        repository.executeQuery(action);
-        String response = "Response";
+        String response = repository.executeQuery(message);
         sqsResponder.sendResponseMessage(MessageContent.fromMessage(message),new MessageContent(response));
     }
 

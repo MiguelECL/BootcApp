@@ -1,14 +1,21 @@
 package com.mcastillo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.util.Date;
 
 public class Product {
     private int id;
     private String name;
     private String description;
-    private int price;
+    private float price;
     private int quantity;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private Date expirationDate;
+
+    public Product() {
+    }
 
     public Product(int id, String name, String description, int quantity, Date expirationDate) {
         this.id = id;
@@ -16,6 +23,14 @@ public class Product {
         this.description = description;
         this.quantity = quantity;
         this.expirationDate = expirationDate;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public int getNumber() {
@@ -42,11 +57,11 @@ public class Product {
         this.description = description;
     }
 
-    public int getPrice() {
+    public float getPrice() {
         return price;
     }
 
-    public void setPrice(int price){
+    public void setPrice(float price){
         this.price = price;
     }
 
@@ -64,5 +79,17 @@ public class Product {
 
     public void setExpirationDate(Date expirationDate) {
         this.expirationDate = expirationDate;
+    }
+
+    @Override
+    public String toString(){
+        return "Product{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", price=" + price +
+                ", quantity=" + quantity +
+                ", expirationDate=" + expirationDate +
+                '}';
     }
 }

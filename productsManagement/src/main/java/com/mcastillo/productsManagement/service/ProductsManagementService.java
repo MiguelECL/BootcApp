@@ -23,7 +23,7 @@ public class ProductsManagementService {
   // It creates a temporary queue for each response
   private final AmazonSQSRequester sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
 
-  public void getProducts() throws TimeoutException {
+  public String getProducts() throws TimeoutException {
     Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
     messageAttributes.put("action", new MessageAttributeValue()
         .withDataType("String")
@@ -44,7 +44,7 @@ public class ProductsManagementService {
     System.out.println("requesting response");
     Message response;
     response = sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
-    System.out.println(response.getBody());
+    return response.getBody();
   }
 
   public void createProduct(){
@@ -53,7 +53,28 @@ public class ProductsManagementService {
   public void updateProduct(){
   }
 
-  public void deleteProduct(){
+  public void deleteProduct(int id) throws TimeoutException{
+    Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+    messageAttributes.put("action", new MessageAttributeValue()
+      .withDataType("String")
+      .withStringValue("DELETE"));
+
+    SendMessageRequest request = new SendMessageRequest()
+      .withQueueUrl(queueURL)
+      .withMessageAttributes(messageAttributes)
+      .withMessageBody(String.valueOf(id));
+
+    //  - creates a temporary queue
+    //  - attaches its URL as an attribute on the message
+    //  - sends the message
+    //  - receives the response from the temporary queue
+    //  - deletes the temporary queue
+    //  - returns the response
+
+    System.out.println("requesting deletion response");
+    Message response;
+    response = sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+    System.out.println(response.getBody());
   }
 
 }

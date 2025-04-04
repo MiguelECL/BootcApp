@@ -15,11 +15,11 @@ public class ProductsManagementController {
   public String getProducts() {
 
     try {
-      service.getProducts();
+      return service.getProducts();
     } catch (TimeoutException e){
       System.out.println("TimeoutException: " + e.getMessage());
+      return "TimeoutException: " + e.getMessage();
     }
-    return "Hello World";
   }
 
   @PostMapping("/products")
@@ -32,8 +32,14 @@ public class ProductsManagementController {
     return "Product updated with id: " + id;
   }
 
-  @DeleteMapping("(/products/{id}")
-  public String deleteProduct(@PathVariable String id) {
-    return "Product deleted with id: " + id;
+  @DeleteMapping("/products/{id}")
+  public String deleteProduct(@PathVariable int id) {
+    try {
+      service.deleteProduct(id);
+      return "Product deleted with id: " + id;
+    } catch (TimeoutException e){
+      System.out.println("TimeoutException: " + e.getMessage());
+      return "Error Deleting Product";
+    }
   }
 }
