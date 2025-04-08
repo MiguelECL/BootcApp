@@ -3,6 +3,7 @@ package com.mcastillo.productsManagement.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mcastillo.Product;
 import com.mcastillo.productsManagement.service.ProductsManagementService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,9 +27,13 @@ class ProductsManagementControllerTest {
 
   @Mock
   private ProductsManagementService service;
-
-  @InjectMocks
   private ProductsManagementController controller;
+
+  @BeforeEach
+  void setUp(){
+    // Initialize the controller with the mocked service
+    controller = new ProductsManagementController(service);
+  }
 
   @Test
   void testGetProducts() throws TimeoutException {
