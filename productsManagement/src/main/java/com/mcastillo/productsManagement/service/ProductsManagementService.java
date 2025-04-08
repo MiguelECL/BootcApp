@@ -8,6 +8,9 @@ import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -18,6 +21,11 @@ import java.util.concurrent.TimeoutException;
 ///  This service sends messages through SQS to the products service.
 @Service
 public class ProductsManagementService {
+
+  private static final Logger logger = LoggerFactory.getLogger(ProductsManagementService.class);
+
+  @Value("${sqs.timeout}")
+  private int TIMEOUT;
 
   // The queue URL is set in the environment variable QUEUE_URL
   String queueURL;
@@ -51,12 +59,12 @@ public class ProductsManagementService {
       .withMessageBody("GET PRODUCTS");
 
     // slf4j logger
-    System.out.println("requesting response");
+    logger.info("Getting products");
     Message response;
 
     // mover configuracion a .yaml
     // @ConfigurationProperties
-    response = sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+    response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
     return response.getBody();
   }
 
@@ -71,7 +79,7 @@ public class ProductsManagementService {
       .withMessageAttributes(messageAttributes)
       .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
-    sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+    sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
   }
 
   public void updateProduct(Product product) throws TimeoutException, JsonProcessingException {
@@ -85,7 +93,7 @@ public class ProductsManagementService {
       .withMessageAttributes(messageAttributes)
       .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
-    sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+    sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
   }
 
   public void deleteProduct(int id) throws TimeoutException{
@@ -99,10 +107,11 @@ public class ProductsManagementService {
       .withMessageAttributes(messageAttributes)
       .withMessageBody(String.valueOf(id));
 
-    System.out.println("requesting deletion response");
+    logger.info("Requesting Deletion Response");
     Message response;
-    response = sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+    response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
     System.out.println(response.getBody());
+    logger.info("Response: " + response.getBody());
   }
 
 }
