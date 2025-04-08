@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 
 import java.sql.Date;
 import java.util.HashMap;
@@ -36,6 +38,9 @@ class ProductsManagementServiceTest {
 
   ObjectMapper objectMapper;
 
+  @Value("${sqs.timeout}")
+  private int TIMEOUT;
+
   @BeforeEach
   void setUp(){
     // Initialize the service with the mocked AmazonSQSRequester
@@ -57,7 +62,7 @@ class ProductsManagementServiceTest {
       .withMessageBody("GET PRODUCTS");
 
     Message mockResponse = new Message().withBody("Response");
-    when(mockRequester.sendMessageAndGetResponse(mockRequest, 5, TimeUnit.SECONDS)).thenReturn(mockResponse);
+    when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenReturn(mockResponse);
 
     service.getProducts();
     assertEquals("Response", mockResponse.getBody());
@@ -78,7 +83,7 @@ class ProductsManagementServiceTest {
       .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
     Message mockResponse = new Message().withBody("Response");
-    when(mockRequester.sendMessageAndGetResponse(mockRequest,5,TimeUnit.SECONDS)).thenReturn(mockResponse);
+    when(mockRequester.sendMessageAndGetResponse(mockRequest,0,TimeUnit.SECONDS)).thenReturn(mockResponse);
 
     service.createProduct(product);
 
@@ -101,7 +106,7 @@ class ProductsManagementServiceTest {
       .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
     Message mockResponse = new Message().withBody("Response");
-    when(mockRequester.sendMessageAndGetResponse(mockRequest, 5, TimeUnit.SECONDS)).thenReturn(mockResponse);
+    when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenReturn(mockResponse);
 
     service.updateProduct(product);
 
@@ -121,7 +126,7 @@ class ProductsManagementServiceTest {
       .withMessageAttributes(messageAttributes)
       .withMessageBody(String.valueOf(id));
 
-    when(mockRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS)).thenReturn(new Message().withBody("Response"));
+    when(mockRequester.sendMessageAndGetResponse(request,0, TimeUnit.SECONDS)).thenReturn(new Message().withBody("Response"));
     Message mockResponse = new Message().withBody("Response");
     service.deleteProduct(id);
 

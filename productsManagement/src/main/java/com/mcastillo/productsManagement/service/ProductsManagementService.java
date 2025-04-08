@@ -24,7 +24,7 @@ public class ProductsManagementService {
 
   private static final Logger logger = LoggerFactory.getLogger(ProductsManagementService.class);
 
-  @Value("${sqs.timeout}")
+  @Value("${sqs.timeout:5}")
   private int TIMEOUT;
 
   // The queue URL is set in the environment variable QUEUE_URL
