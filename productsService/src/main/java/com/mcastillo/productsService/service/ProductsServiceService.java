@@ -2,6 +2,8 @@ package com.mcastillo.productsService.service;
 
 import com.amazonaws.services.sqs.*;
 import com.amazonaws.services.sqs.model.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
@@ -16,6 +18,8 @@ import java.util.concurrent.Executors;
 /// This service receives messages from products Management through SQS and communicates with the database.
 @Service
 public class ProductsServiceService {
+
+    private final Logger logger = LoggerFactory.getLogger(ProductsServiceService.class);
 
     private final String queueURL;
     private final AmazonSQS sqsClient;
@@ -55,7 +59,7 @@ public class ProductsServiceService {
     }
 
     public void pollQueue() {
-        System.out.println("Polling SQS...");
+        logger.info("Polling SQS...");
 
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueURL)
@@ -64,18 +68,16 @@ public class ProductsServiceService {
                 .withWaitTimeSeconds(20);
 
         List<Message> messages = sqsClient.receiveMessage(receiveMessageRequest).getMessages();
-        System.out.println(messages);
-
+        logger.info("Received {} messages", messages.size());
+        logger.info(messages.toString());
 
         for (Message message : messages){
             executorService.submit(() -> {
                 try {
-                    System.out.println("Received message: " + message.getBody());
                     processMessage(message);
                     deleteMessage(message);
                 } catch (Exception e) {
-                    System.out.println("Error processing message: " + e.getMessage());
-                    e.printStackTrace();
+                    logger.trace("Error processing message:", e);
                 }
             });
         }
@@ -91,6 +93,6 @@ public class ProductsServiceService {
                 .withQueueUrl(queueURL)
                 .withReceiptHandle(message.getReceiptHandle());
         sqsClient.deleteMessage(deleteMessageRequest);
-        System.out.println("Deleted message: " + message.getBody());
+        logger.info("Deleted message: {}", message.getBody());
     }
 }

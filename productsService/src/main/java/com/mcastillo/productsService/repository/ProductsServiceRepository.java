@@ -4,6 +4,8 @@ import com.amazonaws.services.sqs.model.Message;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
 import com.mcastillo.productsService.configuration.Queries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -16,6 +18,7 @@ import java.util.List;
 @Repository
 public class ProductsServiceRepository {
 
+    private static final Logger logger = LoggerFactory.getLogger(ProductsServiceRepository.class);
     private final Queries queries;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
@@ -44,7 +47,7 @@ public class ProductsServiceRepository {
 
     public String executeQuery(Message message){
         String action = message.getMessageAttributes().get("action").getStringValue();
-        System.out.println(action);
+        logger.info("Received action from message: {} ", action);
         String response;
 
         switch (action){
@@ -56,7 +59,7 @@ public class ProductsServiceRepository {
                 try {
                     response = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(productList);
                 } catch (Exception e){
-                    e.printStackTrace();
+                    logger.error("Error serializing product list:", e);
                     response = "Error serializing product list";
                 }
                 break;
@@ -66,7 +69,7 @@ public class ProductsServiceRepository {
                 Product product;
                 try {
                     product = objectMapper.readValue(message.getBody(), Product.class);
-                    System.out.println("Creating product: " + product);
+                    logger.info("Creating product: {}", product);
                     jdbcTemplate.update(queries.getCreateProduct(),
                             product.getName(),
                             product.getDescription(),
@@ -75,7 +78,7 @@ public class ProductsServiceRepository {
                     response = "Product created: " + product.getName();
 
                 } catch (Exception e){
-                    e.printStackTrace();
+                    logger.error("Error serializing product list:", e);
                     response = "Error deserializing product from POST";
                 }
                 break;
@@ -94,20 +97,20 @@ public class ProductsServiceRepository {
 
                     response = "Product updated: " + updatedProduct.getName();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.error("Error serializing product list:", e);
                     response = "Error deserializing product from PUT";
                 }
                 break;
 
             case "DELETE":
                 int id = Integer.parseInt(message.getBody());
-                System.out.println("Deleting product with id: " + id);
+                logger.info("Deleting product with id: {}", id);
                 jdbcTemplate.update(queries.getDeleteProduct(), id);
                 response = "Product deleted with id: " + id;
                 break;
 
             default:
-                System.out.println("Action not supported");
+                logger.info("Action not supported");
                 response = "Action not supported";
                 break;
         }

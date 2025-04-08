@@ -110,8 +110,7 @@ public class ProductsManagementService {
     logger.info("Requesting Deletion Response");
     Message response;
     response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-    System.out.println(response.getBody());
-    logger.info("Response: " + response.getBody());
+    logger.info("Response: {}", response.getBody());
   }
 
 }
