@@ -1,8 +1,6 @@
 package com.mcastillo.productsService.repository;
 
 import com.amazonaws.services.sqs.model.Message;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
 import com.mcastillo.productsService.configuration.Queries;
@@ -18,12 +16,16 @@ import java.util.List;
 @Repository
 public class ProductsServiceRepository {
 
-    @Autowired
-    Queries queries;
+    private final Queries queries;
+    private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    // Using jdbcTemplate;
     @Autowired
-    JdbcTemplate jdbcTemplate;
+    public ProductsServiceRepository(Queries queries, ObjectMapper objectMapper, JdbcTemplate jdbcTemplate) {
+        this.queries = queries;
+        this.objectMapper = objectMapper;
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
     // Custom row mapper
     public static class ProductRowMapper implements RowMapper<Product> {
@@ -34,7 +36,7 @@ public class ProductsServiceRepository {
             product.setName(rs.getString("name"));
             product.setDescription(rs.getString("description"));
             product.setPrice(rs.getFloat("price"));
-            product.setExpirationDate(rs.getTimestamp("expiration_date"));
+            product.setExpirationDate(rs.getDate("expiration_date"));
 
             return product;
         }
@@ -43,8 +45,7 @@ public class ProductsServiceRepository {
     public String executeQuery(Message message){
         String action = message.getMessageAttributes().get("action").getStringValue();
         System.out.println(action);
-        String response = "";
-        ObjectMapper objectMapper = new ObjectMapper();
+        String response;
 
         switch (action){
             case "GET":
@@ -107,7 +108,7 @@ public class ProductsServiceRepository {
 
             default:
                 System.out.println("Action not supported");
-                response = "Error completing query";
+                response = "Action not supported";
                 break;
         }
 
