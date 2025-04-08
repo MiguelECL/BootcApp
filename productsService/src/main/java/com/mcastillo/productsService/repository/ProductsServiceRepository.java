@@ -1,11 +1,11 @@
 package com.mcastillo.productsService.repository;
 
 import com.amazonaws.services.sqs.model.Message;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
 import com.mcastillo.productsService.configuration.Queries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -18,12 +18,17 @@ import java.util.List;
 @Repository
 public class ProductsServiceRepository {
 
-    @Autowired
-    Queries queries;
+    private static final Logger logger = LoggerFactory.getLogger(ProductsServiceRepository.class);
+    private final Queries queries;
+    private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    // Using jdbcTemplate;
     @Autowired
-    JdbcTemplate jdbcTemplate;
+    public ProductsServiceRepository(Queries queries, ObjectMapper objectMapper, JdbcTemplate jdbcTemplate) {
+        this.queries = queries;
+        this.objectMapper = objectMapper;
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
     // Custom row mapper
     public static class ProductRowMapper implements RowMapper<Product> {
@@ -34,7 +39,7 @@ public class ProductsServiceRepository {
             product.setName(rs.getString("name"));
             product.setDescription(rs.getString("description"));
             product.setPrice(rs.getFloat("price"));
-            product.setExpirationDate(rs.getTimestamp("expiration_date"));
+            product.setExpirationDate(rs.getDate("expiration_date"));
 
             return product;
         }
@@ -42,9 +47,8 @@ public class ProductsServiceRepository {
 
     public String executeQuery(Message message){
         String action = message.getMessageAttributes().get("action").getStringValue();
-        System.out.println(action);
-        String response = "";
-        ObjectMapper objectMapper = new ObjectMapper();
+        logger.info("Received action from message: {} ", action);
+        String response;
 
         switch (action){
             case "GET":
@@ -55,7 +59,7 @@ public class ProductsServiceRepository {
                 try {
                     response = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(productList);
                 } catch (Exception e){
-                    e.printStackTrace();
+                    logger.error("Error serializing product list:", e);
                     response = "Error serializing product list";
                 }
                 break;
@@ -65,7 +69,7 @@ public class ProductsServiceRepository {
                 Product product;
                 try {
                     product = objectMapper.readValue(message.getBody(), Product.class);
-                    System.out.println("Creating product: " + product);
+                    logger.info("Creating product: {}", product);
                     jdbcTemplate.update(queries.getCreateProduct(),
                             product.getName(),
                             product.getDescription(),
@@ -74,7 +78,7 @@ public class ProductsServiceRepository {
                     response = "Product created: " + product.getName();
 
                 } catch (Exception e){
-                    e.printStackTrace();
+                    logger.error("Error serializing product list:", e);
                     response = "Error deserializing product from POST";
                 }
                 break;
@@ -93,21 +97,21 @@ public class ProductsServiceRepository {
 
                     response = "Product updated: " + updatedProduct.getName();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.error("Error serializing product list:", e);
                     response = "Error deserializing product from PUT";
                 }
                 break;
 
             case "DELETE":
                 int id = Integer.parseInt(message.getBody());
-                System.out.println("Deleting product with id: " + id);
+                logger.info("Deleting product with id: {}", id);
                 jdbcTemplate.update(queries.getDeleteProduct(), id);
                 response = "Product deleted with id: " + id;
                 break;
 
             default:
-                System.out.println("Action not supported");
-                response = "Error completing query";
+                logger.info("Action not supported");
+                response = "Action not supported";
                 break;
         }
 

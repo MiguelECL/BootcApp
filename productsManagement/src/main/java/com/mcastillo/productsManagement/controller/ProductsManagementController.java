@@ -1,10 +1,8 @@
 package com.mcastillo.productsManagement.controller;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mcastillo.Product;
 import com.mcastillo.productsManagement.service.ProductsManagementService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,13 +15,15 @@ import java.util.concurrent.TimeoutException;
 @CrossOrigin
 public class ProductsManagementController {
 
-  // Inject the products management service, @Autowired is used to inject the service to let spring;s
-  // manage the lifecycle of the service
-  @Autowired
-  ProductsManagementService service;
+  private final ProductsManagementService service; // interfaz
+
+  public ProductsManagementController(ProductsManagementService service) {
+    this.service = service;
+  }
 
   @GetMapping("/products")
   public ResponseEntity<?> getProducts() {
+    // controller advice
     try {
       return ResponseEntity.ok(service.getProducts());
     } catch (TimeoutException e){

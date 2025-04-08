@@ -8,9 +8,11 @@ import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.sql.Time;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -20,13 +22,30 @@ import java.util.concurrent.TimeoutException;
 @Service
 public class ProductsManagementService {
 
+  private static final Logger logger = LoggerFactory.getLogger(ProductsManagementService.class);
+
+  @Value("${sqs.timeout:5}")
+  private int TIMEOUT;
+
   // The queue URL is set in the environment variable QUEUE_URL
-  String queueURL = System.getenv("QUEUE_URL");
+  String queueURL;
 
   // AmazonSQSRequester is class that that allows for two-way communication with virtual queues
   // It creates a temporary queue for each response
-  private final AmazonSQSRequester sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
+  private final AmazonSQSRequester sqsRequester;
   ObjectMapper objectMapper = new ObjectMapper();
+
+  //no args constructor
+  public ProductsManagementService() {
+    this.queueURL = System.getenv("QUEUE_URL");
+    this.sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
+  }
+
+  // args constructor for testing
+  public ProductsManagementService(String queueURL, AmazonSQSRequester sqsRequester) {
+    this.queueURL = queueURL;
+    this.sqsRequester = sqsRequester;
+  }
 
   public String getProducts() throws TimeoutException {
     Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
@@ -37,18 +56,15 @@ public class ProductsManagementService {
     SendMessageRequest request = new SendMessageRequest()
       .withQueueUrl(queueURL)
       .withMessageAttributes(messageAttributes)
-      .withMessageBody("Test");
+      .withMessageBody("GET PRODUCTS");
 
-    //  - creates a temporary queue
-    //  - attaches its URL as an attribute on the message
-    //  - sends the message
-    //  - receives the response from the temporary queue
-    //  - deletes the temporary queue
-    //  - returns the response
-
-    System.out.println("requesting response");
+    // slf4j logger
+    logger.info("Getting products");
     Message response;
-    response = sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+
+    // mover configuracion a .yaml
+    // @ConfigurationProperties
+    response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
     return response.getBody();
   }
 
@@ -63,7 +79,7 @@ public class ProductsManagementService {
       .withMessageAttributes(messageAttributes)
       .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
-    sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+    sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
   }
 
   public void updateProduct(Product product) throws TimeoutException, JsonProcessingException {
@@ -77,7 +93,7 @@ public class ProductsManagementService {
       .withMessageAttributes(messageAttributes)
       .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
-    sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
+    sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
   }
 
   public void deleteProduct(int id) throws TimeoutException{
@@ -91,17 +107,10 @@ public class ProductsManagementService {
       .withMessageAttributes(messageAttributes)
       .withMessageBody(String.valueOf(id));
 
-    //  - creates a temporary queue
-    //  - attaches its URL as an attribute on the message
-    //  - sends the message
-    //  - receives the response from the temporary queue
-    //  - deletes the temporary queue
-    //  - returns the response
-
-    System.out.println("requesting deletion response");
+    logger.info("Requesting Deletion Response");
     Message response;
-    response = sqsRequester.sendMessageAndGetResponse(request, 5, TimeUnit.SECONDS);
-    System.out.println(response.getBody());
+    response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+    logger.info("Response: {}", response.getBody());
   }
 
 }
