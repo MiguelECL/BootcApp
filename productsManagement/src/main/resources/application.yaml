@@ -1,9 +1,0 @@
-spring:
-  application:
-    name: productsManagement
-
-server:
-  port: 7643
-
-sqs:
-  timeout: 5
