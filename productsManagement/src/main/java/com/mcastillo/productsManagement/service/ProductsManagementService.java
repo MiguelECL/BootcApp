@@ -1,5 +1,6 @@
 package com.mcastillo.productsManagement.service;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.sqs.AmazonSQSRequester;
 import com.amazonaws.services.sqs.AmazonSQSRequesterClientBuilder;
 import com.amazonaws.services.sqs.model.Message;
@@ -58,8 +59,13 @@ public class ProductsManagementService implements ProductsManagementServiceInter
 		logger.info("Getting products");
 		Message response;
 
-		response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-		return response.getBody();
+		try {
+			response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+			return response.getBody();
+		} catch (AmazonClientException e){
+			logger.error("Timeout while waiting for SQS Response", e);
+			throw new TimeoutException(e.getMessage());
+		}
 	}
 
 	public void createProduct(Product product) throws TimeoutException, JsonProcessingException {
@@ -73,7 +79,12 @@ public class ProductsManagementService implements ProductsManagementServiceInter
 				.withMessageAttributes(messageAttributes)
 				.withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
-		sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+		try{
+			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+		} catch (AmazonClientException e) {
+			logger.error("Timeout while waiting for SQS Response", e);
+			throw new TimeoutException(e.getMessage());
+		}
 	}
 
 	public void updateProduct(Product product) throws TimeoutException, JsonProcessingException {
@@ -87,7 +98,12 @@ public class ProductsManagementService implements ProductsManagementServiceInter
 				.withMessageAttributes(messageAttributes)
 				.withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
-		sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+		try{
+			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+		} catch (AmazonClientException e) {
+			logger.error("Timeout while waiting for SQS Response", e);
+			throw new TimeoutException(e.getMessage());
+		}
 	}
 
 	public void deleteProduct(int id) throws TimeoutException{
@@ -103,8 +119,15 @@ public class ProductsManagementService implements ProductsManagementServiceInter
 
 		logger.info("Requesting Deletion Response");
 		Message response;
-		response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-		logger.info("Response: {}", response.getBody());
+
+		try{
+			response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+			logger.info("Response: {}", response.getBody());
+		} catch (AmazonClientException e) {
+			logger.error("Timeout while waiting for SQS Response", e);
+			throw new TimeoutException(e.getMessage());
+		}
+
 	}
 
 }

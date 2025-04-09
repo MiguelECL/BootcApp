@@ -3,10 +3,7 @@ package com.mcastillo.productsService.service;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSResponder;
 import com.amazonaws.services.sqs.MessageContent;
-import com.amazonaws.services.sqs.model.DeleteMessageRequest;
-import com.amazonaws.services.sqs.model.Message;
-import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
-import com.amazonaws.services.sqs.model.ReceiveMessageResult;
+import com.amazonaws.services.sqs.model.*;
 import com.mcastillo.productsService.repository.ProductsServiceRepository;
 import com.mcastillo.productsService.service.ProductsServiceService;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +34,9 @@ public class ProductsServiceServiceTest {
 	@Mock
 	private ProductsServiceRepository repository;
 
+	@Mock
+	private ExecutorService executorService;
+
 	@InjectMocks
 	private ProductsServiceService productsServiceService;
 
@@ -46,7 +46,7 @@ public class ProductsServiceServiceTest {
 	void setUp() {
 		MockitoAnnotations.openMocks(this);
 		String queueUrl = "mockQueueURL";
-		productsServiceService = new ProductsServiceService(repository, sqsClient, sqsResponder, queueUrl);
+		productsServiceService = new ProductsServiceService(repository, sqsClient, sqsResponder, queueUrl, executorService);
 		latch = new CountDownLatch(1);
 	}
 
@@ -78,55 +78,87 @@ public class ProductsServiceServiceTest {
 
 	@Test
 	void testPollQueue_receivesMessages() {
-		// Prepare a mock list of messages
 		Message mockMessage = new Message();
 		mockMessage.setBody("Test message body");
 		when(sqsClient.receiveMessage(any(ReceiveMessageRequest.class)))
 				.thenReturn(new ReceiveMessageResult().withMessages(mockMessage));
 
-		// Call pollQueue
 		productsServiceService.pollQueue();
 
-		// Verify that the SQS client's receiveMessage was called once
 		verify(sqsClient, times(1)).receiveMessage(any(ReceiveMessageRequest.class));
 	}
 
 	@Test
+	void testPollQueue_deletesMessages() throws InterruptedException {
+		// Prepare mock message
+		Message mockMessage = new Message();
+		mockMessage.setBody("Test message body");
+		mockMessage.setReceiptHandle("MockReceiptHandle");
+
+		// Mock the receiveMessage response
+		ReceiveMessageResult receiveMessageResult = new ReceiveMessageResult().withMessages(mockMessage);
+
+		// Mock the deleteMessage response
+		DeleteMessageResult deleteMessageResult = new DeleteMessageResult();
+
+		// Mock the behavior of sqsClient
+		when(sqsClient.receiveMessage(any(ReceiveMessageRequest.class)))
+				.thenReturn(receiveMessageResult);
+		when(sqsClient.deleteMessage(any(DeleteMessageRequest.class)))
+				.thenReturn(deleteMessageResult);
+
+		// Create CountDownLatch to synchronize thread completion
+		CountDownLatch latch = new CountDownLatch(1);
+
+		// Mock the executor service to simulate message processing
+		doAnswer(invocation -> {
+			Runnable task = invocation.getArgument(0);
+			new Thread(() -> {
+				task.run();  // Run the task in the current thread to simplify the test
+				latch.countDown();  // Count down when the task is finished
+			}).start();
+			return null;
+		}).when(executorService).submit(any(Runnable.class));
+
+		// Instantiate ProductsServiceService with the mocked dependencies
+		productsServiceService = new ProductsServiceService(repository, sqsClient, sqsResponder, "mockQueueURL", executorService);
+
+		// Call the method under test
+		productsServiceService.pollQueue();
+
+		// Wait for the executor service to finish processing the message
+		latch.await();  // Wait for the task to complete
+
+		// Verify deleteMessage is called once
+		verify(sqsClient, times(1)).deleteMessage(any(DeleteMessageRequest.class));
+	}
+
+	@Test
 	void test_initializePolling() throws InterruptedException {
-		// Create a spy of the ProductsServiceService to spy on the method calls
 		ProductsServiceService spyService = spy(productsServiceService);
 
-		// Mock the pollQueueContinuously method to complete quickly
 		doAnswer(invocation -> {
-			latch.countDown();  // Signal that the polling method has been called
+			latch.countDown();
 			return null;
 		}).when(spyService).pollQueueContinuously();
 
-		// Call the initializePolling method, which starts the thread
 		spyService.initializePolling();
 
-		// Wait for the polling thread to start and execute the mocked pollQueueContinuously
 		latch.await();
 
-		// Verify that the pollQueueContinuously method was called at least once
 		verify(spyService, times(1)).pollQueueContinuously();
 	}
 
 	@Test
 	void test_PollQueueContinuously() {
-		// Create a spy of the ProductsServiceService to mock the pollQueue() method
 		ProductsServiceService spyService = spy(productsServiceService);
 
-		// Mock pollQueue() to return immediately without executing its logic
 		doThrow(new RuntimeException("Mocked pollQueue")).when(spyService).pollQueue();
 
-		// Use assertThrows to verify that a RuntimeException is thrown when pollQueueContinuously is called
 		RuntimeException thrown = assertThrows(RuntimeException.class, spyService::pollQueueContinuously);
 
-		// Verify that the exception message matches the expected message
 		assertEquals("Mocked pollQueue", thrown.getMessage());
 
-		// Verify that pollQueue was called at least once
 		verify(spyService, times(1)).pollQueue();
 
 	}
