@@ -23,7 +23,6 @@ public class ProductsServiceRepository {
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
-    @Autowired
     public ProductsServiceRepository(Queries queries, ObjectMapper objectMapper, JdbcTemplate jdbcTemplate) {
         this.queries = queries;
         this.objectMapper = objectMapper;
