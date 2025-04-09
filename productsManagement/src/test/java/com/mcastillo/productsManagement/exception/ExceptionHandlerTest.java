@@ -26,13 +26,13 @@ public class ExceptionHandlerTest {
 	void handleTimeoutException_ShouldReturnRequestTimeoutStatus() throws Exception {
 		mockMvc.perform(get("/timeout"))
 				.andExpect(status().isRequestTimeout())
-				.andExpect(content().string("TimeoutException: Timeout occurred"));
+				.andExpect(content().string("{\"message\":\"Timeout Exception\"}"));
 	}
 
 	@Test
 	void handleJsonProcessingException_ShouldReturnInternalServerErrorStatus() throws Exception {
 		mockMvc.perform(get("/jsonError"))
 				.andExpect(status().isInternalServerError())
-				.andExpect(content().string("JSONProcessingException: Error processing JSON"));
+				.andExpect(content().string("{\"message\":\"JsonProcessing Exception\"}"));
 	}
 }

@@ -1,4 +1,4 @@
-package com.mcastillo.productsManagement.service;
+package com.mcastillo.productsManagement.service.impl;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.sqs.AmazonSQSRequester;
@@ -9,6 +9,9 @@ import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
+import com.mcastillo.productsManagement.service.ProductsManagementService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -25,12 +28,14 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 	private int TIMEOUT;
 
 	// The queue URL is set in the environment variable QUEUE_URL
-	String queueURL;
+	private final String queueURL;
 
 	// AmazonSQSRequester is class that that allows for two-way communication with virtual queues
 	// It creates a temporary queue for each response
 	private final AmazonSQSRequester sqsRequester;
 	ObjectMapper objectMapper = new ObjectMapper();
+
+	Logger logger = LoggerFactory.getLogger(ProductsManagementServiceImpl.class);
 
 	//no args constructor
 	public ProductsManagementServiceImpl() {

@@ -1,4 +1,4 @@
-package com.mcastillo.productsManagement.service;
+package com.mcastillo.productsManagement.service.impl;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.sqs.AmazonSQSRequester;
@@ -8,6 +8,7 @@ import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
+import com.mcastillo.productsManagement.service.ProductsManagementService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +28,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @SpringBootTest
-class ProductsManagementServiceTest {
+class ProductsManagementServiceImplTest {
 
   private static final String queueURL = "test_queue_url";
 

@@ -3,7 +3,7 @@ package com.mcastillo.productsManagement.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
-import com.mcastillo.productsManagement.service.ProductsManagementServiceImpl;
+import com.mcastillo.productsManagement.service.impl.ProductsManagementServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
