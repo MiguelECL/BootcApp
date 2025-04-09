@@ -58,8 +58,6 @@ public class ProductsManagementService implements ProductsManagementServiceInter
 		logger.info("Getting products");
 		Message response;
 
-		// mover configuracion a .yaml
-		// @ConfigurationProperties
 		response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
 		return response.getBody();
 	}
