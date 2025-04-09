@@ -83,9 +83,9 @@ class ProductsManagementServiceImplTest {
             .withMessageBody("GET PRODUCTS");
 
     Message mockResponse = new Message().withBody("Response");
-    when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenThrow(new AmazonClientException("Error"));
+    when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenThrow(new TimeoutException("Error"));
 
-    assertThrows(TimeoutException.class, ()-> service.getProducts());
+    assertThrows(RuntimeException.class, ()-> service.getProducts());
   }
 
   @Test
@@ -100,14 +100,14 @@ class ProductsManagementServiceImplTest {
     SendMessageRequest mockRequest = new SendMessageRequest()
       .withQueueUrl(queueURL)
       .withMessageAttributes(messageAttributes)
-      .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+      .withMessageBody(objectMapper.writeValueAsString(product));
 
     Message mockResponse = new Message().withBody("Response");
     when(mockRequester.sendMessageAndGetResponse(mockRequest,0,TimeUnit.SECONDS)).thenReturn(mockResponse);
 
-    service.createProduct(product);
+    String response = service.createProduct(product);
 
-    assertEquals("Response", mockResponse.getBody());
+    assertEquals(objectMapper.writeValueAsString(product), response);
 
   }
 
@@ -126,9 +126,9 @@ class ProductsManagementServiceImplTest {
             .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
     Message mockResponse = new Message().withBody("Response");
-    when(mockRequester.sendMessageAndGetResponse(mockRequest,0,TimeUnit.SECONDS)).thenThrow(new AmazonClientException("Error"));
+    when(mockRequester.sendMessageAndGetResponse(mockRequest,0,TimeUnit.SECONDS)).thenThrow(new TimeoutException("Error"));
 
-    assertThrows(TimeoutException.class, ()-> service.createProduct(product));
+    assertThrows(RuntimeException.class, ()-> service.createProduct(product));
 
   }
 
@@ -144,14 +144,14 @@ class ProductsManagementServiceImplTest {
     SendMessageRequest mockRequest = new SendMessageRequest()
       .withQueueUrl(queueURL)
       .withMessageAttributes(messageAttributes)
-      .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+      .withMessageBody(objectMapper.writeValueAsString(product));
 
     Message mockResponse = new Message().withBody("Response");
     when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenReturn(mockResponse);
 
-    service.updateProduct(product);
+    String response = service.updateProduct(product);
 
-    assertEquals("Response", mockResponse.getBody());
+    assertEquals(objectMapper.writeValueAsString(product), response);
   }
 
   @Test
@@ -168,9 +168,9 @@ class ProductsManagementServiceImplTest {
             .withMessageAttributes(messageAttributes)
             .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
-    when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenThrow(new AmazonClientException("Error"));
+    when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenThrow(new TimeoutException("Error"));
 
-    assertThrows(TimeoutException.class, ()->service.updateProduct(product));
+    assertThrows(RuntimeException.class, ()->service.updateProduct(product));
 
   }
 
@@ -207,9 +207,9 @@ class ProductsManagementServiceImplTest {
             .withMessageAttributes(messageAttributes)
             .withMessageBody(String.valueOf(id));
 
-    when(mockRequester.sendMessageAndGetResponse(request,0, TimeUnit.SECONDS)).thenThrow(new AmazonClientException("Error"));
+    when(mockRequester.sendMessageAndGetResponse(request,0, TimeUnit.SECONDS)).thenThrow(new TimeoutException("Error"));
 
-    assertThrows(TimeoutException.class, ()-> service.deleteProduct(id));
+    assertThrows(RuntimeException.class, ()-> service.deleteProduct(id));
 
   }
 }

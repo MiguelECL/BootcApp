@@ -53,9 +53,9 @@ class ProductsManagementControllerTest {
 
   @Test
   void testGetProducts_TimeoutException() throws TimeoutException {
-    when(service.getProducts()).thenThrow(new TimeoutException("Timeout occurred"));
+    when(service.getProducts()).thenThrow(new RuntimeException("Timeout occurred"));
 
-    assertThrows(TimeoutException.class, ()-> controller.getProducts());
+    assertThrows(RuntimeException.class, ()-> controller.getProducts());
   }
 
   @Test
@@ -76,18 +76,18 @@ class ProductsManagementControllerTest {
   void testCreateProduct_TimeoutException() throws JsonProcessingException, TimeoutException {
     Product mockProduct = new Product (1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-4-12"));
 
-    doThrow(new TimeoutException("Timeout Occurred")).when(service).createProduct(mockProduct);
+    doThrow(new RuntimeException("Timeout Occurred")).when(service).createProduct(mockProduct);
 
-    assertThrows(TimeoutException.class, ()-> service.createProduct(mockProduct));
+    assertThrows(RuntimeException.class, ()-> service.createProduct(mockProduct));
   }
 
   @Test
   void testCreateProduct_JsonProcessingException() throws JsonProcessingException, TimeoutException {
     Product mockProduct = new Product (1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-4-12"));
 
-    doThrow(new JsonProcessingException("JsonProcessingException: Error processing JSON"){}).when(service).createProduct(mockProduct);
+    doThrow(new IllegalArgumentException("JsonProcessingException: Error processing JSON"){}).when(service).createProduct(mockProduct);
 
-    assertThrows(JsonProcessingException.class, ()-> service.createProduct(mockProduct));
+    assertThrows(IllegalArgumentException.class, ()-> service.createProduct(mockProduct));
   }
 
   @Test
@@ -108,18 +108,18 @@ class ProductsManagementControllerTest {
   void testUpdateProduct_TimeoutException() throws JsonProcessingException, TimeoutException {
     Product mockProduct = new Product (1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-4-12"));
 
-    doThrow(new TimeoutException("TimeoutException: Timeout occurred")).when(service).updateProduct(mockProduct);
+    doThrow(new RuntimeException("TimeoutException: Timeout occurred")).when(service).updateProduct(mockProduct);
 
-    assertThrows(TimeoutException.class, ()-> service.updateProduct(mockProduct));
+    assertThrows(RuntimeException.class, ()-> service.updateProduct(mockProduct));
   }
 
   @Test
   void testUpdateProduct_JsonProcessingException() throws JsonProcessingException, TimeoutException {
     Product mockProduct = new Product (1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-4-12"));
 
-    doThrow(new JsonProcessingException("JsonProcessingException: Error processing JSON"){}).when(service).updateProduct(mockProduct);
+    doThrow(new IllegalArgumentException("JsonProcessingException: Error processing JSON"){}).when(service).updateProduct(mockProduct);
 
-    assertThrows(JsonProcessingException.class, ()-> service.updateProduct(mockProduct));
+    assertThrows(IllegalArgumentException.class, ()-> service.updateProduct(mockProduct));
   }
 
   @Test
@@ -137,9 +137,9 @@ class ProductsManagementControllerTest {
 
     int mockId = 1;
 
-    doThrow(new TimeoutException("TimeoutException: Timeout occurred")).when(service).deleteProduct(mockId);
+    doThrow(new RuntimeException("TimeoutException: Timeout occurred")).when(service).deleteProduct(mockId);
 
-    assertThrows(TimeoutException.class, ()-> service.deleteProduct(mockId));
+    assertThrows(RuntimeException.class, ()-> service.deleteProduct(mockId));
 
 
   }

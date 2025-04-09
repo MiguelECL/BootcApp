@@ -1,6 +1,5 @@
 package com.mcastillo.productsManagement.service.impl;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.sqs.AmazonSQSRequester;
 import com.amazonaws.services.sqs.AmazonSQSRequesterClientBuilder;
 import com.amazonaws.services.sqs.model.Message;
@@ -24,10 +23,10 @@ import java.util.concurrent.TimeoutException;
 @Service
 public class ProductsManagementServiceImpl implements ProductsManagementService {
 
-	@Value("${sqs.timeout:5}")
+	@Value("${sqs.timeout}")
 	private int TIMEOUT;
 
-	// The queue URL is set in the environment variable QUEUE_URL
+	@Value("${sqs.queue}")
 	private final String queueURL;
 
 	// AmazonSQSRequester is class that that allows for two-way communication with virtual queues
@@ -49,7 +48,7 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		this.sqsRequester = sqsRequester;
 	}
 
-	public String getProducts() throws TimeoutException {
+	public String getProducts() {
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
@@ -60,60 +59,69 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 				.withMessageAttributes(messageAttributes)
 				.withMessageBody("GET PRODUCTS");
 
-		// slf4j logger
-		logger.info("Getting products");
 		Message response;
 
 		try {
 			response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
 			return response.getBody();
-		} catch (AmazonClientException e){
-			logger.error("Timeout while waiting for SQS Response", e);
-			throw new TimeoutException(e.getMessage());
+		} catch (TimeoutException e){
+			throw new RuntimeException(e.getMessage(), e);
 		}
 	}
 
-	public String createProduct(Product product) throws TimeoutException, JsonProcessingException {
+	public String createProduct(Product product)  {
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
 				.withStringValue("POST"));
 
-		SendMessageRequest request = new SendMessageRequest()
-				.withQueueUrl(queueURL)
-				.withMessageAttributes(messageAttributes)
-				.withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+		SendMessageRequest request = null;
+		try {
+			request = new SendMessageRequest()
+					.withQueueUrl(queueURL)
+					.withMessageAttributes(messageAttributes)
+					.withMessageBody(objectMapper.writeValueAsString(product));
+		} catch (JsonProcessingException e) {
+			throw new IllegalArgumentException(e.getMessage(), e);
+		}
 
 		try{
 			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-			return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product);
-		} catch (AmazonClientException e) {
-			logger.error("Timeout while waiting for SQS Response", e);
-			throw new TimeoutException(e.getMessage());
+			return objectMapper.writeValueAsString(product);
+		} catch (TimeoutException e) {
+			throw new RuntimeException(e.getMessage(), e);
+		} catch (JsonProcessingException e){
+			throw new IllegalArgumentException(e.getMessage(), e);
 		}
 	}
 
-	public String updateProduct(Product product) throws TimeoutException, JsonProcessingException {
+	public String updateProduct(Product product) {
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
 				.withStringValue("PUT"));
 
-		SendMessageRequest request = new SendMessageRequest()
-				.withQueueUrl(queueURL)
-				.withMessageAttributes(messageAttributes)
-				.withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+		SendMessageRequest request = null;
+		try {
+			request = new SendMessageRequest()
+					.withQueueUrl(queueURL)
+					.withMessageAttributes(messageAttributes)
+					.withMessageBody(objectMapper.writeValueAsString(product));
+		} catch (JsonProcessingException e) {
+			throw new IllegalArgumentException(e);
+		}
 
 		try{
 			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-			return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product);
-		} catch (AmazonClientException e) {
-			logger.error("Timeout while waiting for SQS Response", e);
-			throw new TimeoutException(e.getMessage());
+			return objectMapper.writeValueAsString(product);
+		} catch (TimeoutException e) {
+			throw new RuntimeException(e.getMessage(), e);
+		} catch (JsonProcessingException e){
+			throw new IllegalArgumentException(e.getMessage(), e);
 		}
 	}
 
-	public void deleteProduct(int id) throws TimeoutException{
+	public void deleteProduct(int id) {
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
@@ -124,15 +132,12 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 				.withMessageAttributes(messageAttributes)
 				.withMessageBody(String.valueOf(id));
 
-		logger.info("Requesting Deletion Response");
 		Message response;
 
 		try{
-			response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-			logger.info("Response: {}", response.getBody());
-		} catch (AmazonClientException e) {
-			logger.error("Timeout while waiting for SQS Response", e);
-			throw new TimeoutException(e.getMessage());
+			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+		} catch (TimeoutException e) {
+			throw new RuntimeException(e.getMessage(), e);
 		}
 
 	}
