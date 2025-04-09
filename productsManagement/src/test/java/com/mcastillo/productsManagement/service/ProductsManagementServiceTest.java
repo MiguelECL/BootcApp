@@ -34,7 +34,7 @@ class ProductsManagementServiceTest {
   @Mock
   AmazonSQSRequester mockRequester;
 
-  private ProductsManagementServiceInterface service;
+  private ProductsManagementService service;
 
   ObjectMapper objectMapper;
 
@@ -44,7 +44,7 @@ class ProductsManagementServiceTest {
   @BeforeEach
   void setUp(){
     // Initialize the service with the mocked AmazonSQSRequester
-    service = new ProductsManagementService(queueURL, mockRequester);
+    service = new ProductsManagementServiceImpl(queueURL, mockRequester);
     objectMapper = new ObjectMapper();
   }
 

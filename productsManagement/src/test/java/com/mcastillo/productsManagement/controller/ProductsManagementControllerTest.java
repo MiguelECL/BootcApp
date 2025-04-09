@@ -1,8 +1,9 @@
 package com.mcastillo.productsManagement.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
-import com.mcastillo.productsManagement.service.ProductsManagementService;
+import com.mcastillo.productsManagement.service.ProductsManagementServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +25,7 @@ import static org.mockito.Mockito.*;
 class ProductsManagementControllerTest {
 
   @Mock
-  private ProductsManagementService service;
+  private ProductsManagementServiceImpl service;
   private ProductsManagementController controller;
 
   @BeforeEach
@@ -61,9 +62,13 @@ class ProductsManagementControllerTest {
   void testCreateProduct() throws JsonProcessingException, TimeoutException {
     Product mockProduct = new Product (1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-4-12"));
 
-    ResponseEntity<?> response = controller.createProduct(mockProduct);
-    assertEquals(200, response.getStatusCodeValue());
-    assertEquals("Product created with id: " + mockProduct.getId(), response.getBody());
+    ObjectMapper objectMapper = new ObjectMapper();
+    String expectedJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(mockProduct);
+    when(service.createProduct(mockProduct)).thenReturn(expectedJson);
+
+    ResponseEntity<String> response = controller.createProduct(mockProduct);
+    assertEquals(201, response.getStatusCodeValue());
+    assertEquals(expectedJson, response.getBody());
 
   }
 
@@ -89,9 +94,14 @@ class ProductsManagementControllerTest {
   void testUpdateProduct() throws JsonProcessingException, TimeoutException {
     Product mockProduct = new Product (1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-4-12"));
 
-    ResponseEntity<?> response = controller.updateProduct("1", mockProduct);
+    ObjectMapper objectMapper = new ObjectMapper();
+    String expectedJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(mockProduct);
+
+    when(service.updateProduct(mockProduct)).thenReturn(expectedJson);
+    ResponseEntity<String> response = controller.updateProduct("1", mockProduct);
+
     assertEquals(200, response.getStatusCodeValue());
-    assertEquals("Product updated with id: " + "1", response.getBody());
+    assertEquals(expectedJson, response.getBody());
   }
 
   @Test
@@ -118,8 +128,7 @@ class ProductsManagementControllerTest {
     int mockId = 1;
 
     ResponseEntity<?> response = controller.deleteProduct(mockId);
-    assertEquals(200, response.getStatusCodeValue());
-    assertEquals("Product deleted with id: " + mockId, response.getBody());
+    assertEquals(204, response.getStatusCodeValue());
 
   }
 
