@@ -56,7 +56,7 @@ public class ProductsServiceService {
     }
 
     protected void pollQueueContinuously() {
-        while (true) {
+        while (!Thread.currentThread().isInterrupted()) {
             pollQueue();
         }
     }
