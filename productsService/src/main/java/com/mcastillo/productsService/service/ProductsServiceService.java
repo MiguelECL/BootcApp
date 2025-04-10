@@ -27,27 +27,12 @@ public class ProductsServiceService {
     private final ProductsServiceRepository repository;
     private final ExecutorService executorService;
 
-    @Autowired
     public ProductsServiceService(ProductsServiceRepository repository){
         this.repository = repository;
         this.sqsClient = AmazonSQSClientBuilder.defaultClient();
         this.sqsResponder = AmazonSQSResponderClientBuilder.defaultClient();
         this.queueURL = System.getenv("QUEUE_URL");
         this.executorService = Executors.newFixedThreadPool(10);
-    }
-
-    // Constructor for testing
-    public ProductsServiceService(ProductsServiceRepository repository,
-                                  AmazonSQS sqsClient,
-                                  AmazonSQSResponder sqsResponder,
-                                  String queueURL,
-                                  ExecutorService executorService){
-
-        this.repository = repository;
-        this.sqsClient = sqsClient;
-        this.sqsResponder = sqsResponder;
-        this.queueURL = queueURL;
-        this.executorService = executorService;
     }
 
     @PostConstruct

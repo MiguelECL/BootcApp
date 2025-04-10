@@ -5,24 +5,25 @@ import com.amazonaws.services.sqs.AmazonSQSResponder;
 import com.amazonaws.services.sqs.MessageContent;
 import com.amazonaws.services.sqs.model.*;
 import com.mcastillo.productsService.repository.ProductsServiceRepository;
-import com.mcastillo.productsService.service.ProductsServiceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class ProductsServiceServiceTest {
 
 	@Mock
@@ -37,130 +38,149 @@ public class ProductsServiceServiceTest {
 	@Mock
 	private ExecutorService executorService;
 
-	@InjectMocks
-	private ProductsServiceService productsServiceService;
-
-	private CountDownLatch latch;
+	private ProductsServiceService serviceUnderTest;
+	private final String MOCK_QUEUE_URL = "https://sqs.example.com/12345/test-queue";
 
 	@BeforeEach
 	void setUp() {
 		MockitoAnnotations.openMocks(this);
-		String queueUrl = "mockQueueURL";
-		productsServiceService = new ProductsServiceService(repository, sqsClient, sqsResponder, queueUrl, executorService);
-		latch = new CountDownLatch(1);
+
+		serviceUnderTest = new ProductsServiceService(repository);
+
+		ReflectionTestUtils.setField(serviceUnderTest, "sqsClient", sqsClient);
+		ReflectionTestUtils.setField(serviceUnderTest, "sqsResponder", sqsResponder);
+		ReflectionTestUtils.setField(serviceUnderTest, "queueURL", MOCK_QUEUE_URL);
+		ReflectionTestUtils.setField(serviceUnderTest, "executorService", executorService);
 	}
 
 	@Test
-	void test_ProcessMessage() {
-		Message mockMessage = new Message();
-		mockMessage.setBody("Test message body");
-		when(repository.executeQuery(mockMessage)).thenReturn("Response message");
+	void test_processMessage_ShouldExecuteQueryAndSendResponse() {
+		Message mockMessage = new Message()
+				.withMessageId("test-message-id")
+				.withBody("test message body");
 
-		productsServiceService.processMessage(mockMessage);
+		String expectedResponse = "response data";
+		when(repository.executeQuery(mockMessage)).thenReturn(expectedResponse);
 
-		ArgumentCaptor<MessageContent> messageCaptor = ArgumentCaptor.forClass(MessageContent.class);
-		verify(sqsResponder).sendResponseMessage(any(), messageCaptor.capture());
+		serviceUnderTest.processMessage(mockMessage);
 
-		MessageContent capturedResponse = messageCaptor.getValue();
-		assert capturedResponse.getMessageBody().equals("Response message");
+		verify(repository, times(1)).executeQuery(mockMessage);
+
+		ArgumentCaptor<MessageContent> requestCaptor = ArgumentCaptor.forClass(MessageContent.class);
+		ArgumentCaptor<MessageContent> responseCaptor = ArgumentCaptor.forClass(MessageContent.class);
+
+		verify(sqsResponder, times(1)).sendResponseMessage(requestCaptor.capture(), responseCaptor.capture());
+
+		assertEquals(expectedResponse, responseCaptor.getValue().getMessageBody());
 	}
 
 	@Test
-	void test_DeleteMessage() {
-		Message mockMessage = new Message();
-		mockMessage.setReceiptHandle("mockReceiptHandle");
-		mockMessage.setBody("Test message");
+	void deleteMessage_ShouldCallSqsClientWithCorrectParameters() {
+		String receiptHandle = "test-receipt-handle";
+		Message mockMessage = new Message()
+				.withMessageId("test-message-id")
+				.withReceiptHandle(receiptHandle)
+				.withBody("test message body");
 
-		productsServiceService.deleteMessage(mockMessage);
+		serviceUnderTest.deleteMessage(mockMessage);
 
-		verify(sqsClient).deleteMessage(any());
+		ArgumentCaptor<DeleteMessageRequest> requestCaptor = ArgumentCaptor.forClass(DeleteMessageRequest.class);
+		verify(sqsClient, times(1)).deleteMessage(requestCaptor.capture());
+
+		DeleteMessageRequest capturedRequest = requestCaptor.getValue();
+		assertEquals(MOCK_QUEUE_URL, capturedRequest.getQueueUrl());
+		assertEquals(receiptHandle, capturedRequest.getReceiptHandle());
 	}
 
 	@Test
-	void testPollQueue_receivesMessages() {
-		Message mockMessage = new Message();
-		mockMessage.setBody("Test message body");
-		when(sqsClient.receiveMessage(any(ReceiveMessageRequest.class)))
-				.thenReturn(new ReceiveMessageResult().withMessages(mockMessage));
+	void pollQueue_WithNoMessages_ShouldNotProcessAnything() {
+		ReceiveMessageResult emptyResult = new ReceiveMessageResult().withMessages(Collections.emptyList());
+		when(sqsClient.receiveMessage(any(ReceiveMessageRequest.class))).thenReturn(emptyResult);
 
-		productsServiceService.pollQueue();
+		serviceUnderTest.pollQueue();
 
 		verify(sqsClient, times(1)).receiveMessage(any(ReceiveMessageRequest.class));
+		verify(executorService, never()).submit(any(Runnable.class));
 	}
 
 	@Test
-	void testPollQueue_deletesMessages() throws InterruptedException {
-		// Prepare mock message
-		Message mockMessage = new Message();
-		mockMessage.setBody("Test message body");
-		mockMessage.setReceiptHandle("MockReceiptHandle");
+	void pollQueue_WithMessages_ShouldSubmitTasksToExecutorService() {
+		Message message1 = new Message().withMessageId("id-1").withBody("body-1").withReceiptHandle("receipt-1");
+		Message message2 = new Message().withMessageId("id-2").withBody("body-2").withReceiptHandle("receipt-2");
+		List<Message> messages = Arrays.asList(message1, message2);
 
-		// Mock the receiveMessage response
-		ReceiveMessageResult receiveMessageResult = new ReceiveMessageResult().withMessages(mockMessage);
+		ReceiveMessageResult mockResult = new ReceiveMessageResult().withMessages(messages);
+		when(sqsClient.receiveMessage(any(ReceiveMessageRequest.class))).thenReturn(mockResult);
 
-		// Mock the deleteMessage response
-		DeleteMessageResult deleteMessageResult = new DeleteMessageResult();
+		when(repository.executeQuery(any(Message.class))).thenReturn("test-response");
 
-		// Mock the behavior of sqsClient
-		when(sqsClient.receiveMessage(any(ReceiveMessageRequest.class)))
-				.thenReturn(receiveMessageResult);
-		when(sqsClient.deleteMessage(any(DeleteMessageRequest.class)))
-				.thenReturn(deleteMessageResult);
-
-		// Create CountDownLatch to synchronize thread completion
-		CountDownLatch latch = new CountDownLatch(1);
-
-		// Mock the executor service to simulate message processing
+		List<Runnable> capturedRunnables = new ArrayList<>();
 		doAnswer(invocation -> {
-			Runnable task = invocation.getArgument(0);
-			new Thread(() -> {
-				task.run();  // Run the task in the current thread to simplify the test
-				latch.countDown();  // Count down when the task is finished
-			}).start();
+			Runnable runnable = invocation.getArgument(0);
+			capturedRunnables.add(runnable);
 			return null;
 		}).when(executorService).submit(any(Runnable.class));
 
-		// Instantiate ProductsServiceService with the mocked dependencies
-		productsServiceService = new ProductsServiceService(repository, sqsClient, sqsResponder, "mockQueueURL", executorService);
+		serviceUnderTest.pollQueue();
 
-		// Call the method under test
-		productsServiceService.pollQueue();
+		verify(sqsClient, times(1)).receiveMessage(any(ReceiveMessageRequest.class));
+		verify(executorService, times(2)).submit(any(Runnable.class));
 
-		// Wait for the executor service to finish processing the message
-		latch.await();  // Wait for the task to complete
+		for (Runnable runnable : capturedRunnables) {
+			runnable.run();
+		}
 
-		// Verify deleteMessage is called once
+		verify(repository, times(1)).executeQuery(eq(message1));
+		verify(repository, times(1)).executeQuery(eq(message2));
+		verify(sqsClient, times(2)).deleteMessage(any(DeleteMessageRequest.class));
+	}
+
+	@Test
+	void pollQueue_WithExceptionDuringProcessing_ShouldContinueWithNextMessage() {
+		Message message1 = new Message().withMessageId("id-1").withBody("body-1");
+		Message message2 = new Message().withMessageId("id-2").withBody("body-2");
+		List<Message> messages = Arrays.asList(message1, message2);
+
+		ReceiveMessageResult mockResult = new ReceiveMessageResult().withMessages(messages);
+		when(sqsClient.receiveMessage(any(ReceiveMessageRequest.class))).thenReturn(mockResult);
+
+		when(repository.executeQuery(eq(message1))).thenThrow(new RuntimeException("Test exception"));
+		when(repository.executeQuery(eq(message2))).thenReturn("response-2");
+
+		doAnswer(invocation -> {
+			Runnable runnable = invocation.getArgument(0);
+			runnable.run();
+			return null;
+		}).when(executorService).submit(any(Runnable.class));
+
+		serviceUnderTest.pollQueue();
+
+		verify(repository, times(1)).executeQuery(eq(message2));
+		verify(sqsResponder, times(1)).sendResponseMessage(any(MessageContent.class), any(MessageContent.class));
 		verify(sqsClient, times(1)).deleteMessage(any(DeleteMessageRequest.class));
 	}
 
 	@Test
-	void test_initializePolling() throws InterruptedException {
-		ProductsServiceService spyService = spy(productsServiceService);
+	void pollQueueContinuously_ShouldContinuePollingUntilInterrupted() throws InterruptedException {
+		ProductsServiceService spy = spy(serviceUnderTest);
 
-		doAnswer(invocation -> {
-			latch.countDown();
-			return null;
-		}).when(spyService).pollQueueContinuously();
+		doNothing().doNothing().doThrow(new RuntimeException("Stop the test"))
+				.when(spy).pollQueue();
 
-		spyService.initializePolling();
-
-		latch.await();
-
-		verify(spyService, times(1)).pollQueueContinuously();
+		assertThrows(RuntimeException.class, () -> spy.pollQueueContinuously());
+		verify(spy, times(3)).pollQueue();
 	}
 
 	@Test
-	void test_PollQueueContinuously() {
-		ProductsServiceService spyService = spy(productsServiceService);
+	void initializePolling_ShouldStartNewThread() throws InterruptedException {
+		ProductsServiceService spy = spy(serviceUnderTest);
 
-		doThrow(new RuntimeException("Mocked pollQueue")).when(spyService).pollQueue();
+		doNothing().when(spy).pollQueueContinuously();
 
-		RuntimeException thrown = assertThrows(RuntimeException.class, spyService::pollQueueContinuously);
+		spy.initializePolling();
 
-		assertEquals("Mocked pollQueue", thrown.getMessage());
+		Thread.sleep(100);
 
-		verify(spyService, times(1)).pollQueue();
-
+		verify(spy, times(1)).pollQueueContinuously();
 	}
-
 }
