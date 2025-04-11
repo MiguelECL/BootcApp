@@ -30,7 +30,7 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 	private String queueURL;
 
 	private final AmazonSQSRequester sqsRequester;
-	ObjectMapper objectMapper = new ObjectMapper();
+	private final ObjectMapper objectMapper = new ObjectMapper();
 
 	public ProductsManagementServiceImpl() {
 		this.sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
