@@ -64,14 +64,4 @@ public class Product {
         this.expirationDate = expirationDate;
     }
 
-    @Override
-    public String toString(){
-        return "Product{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", description='" + description + '\'' +
-                ", price=" + price +
-                ", expirationDate=" + expirationDate +
-                '}';
-    }
 }

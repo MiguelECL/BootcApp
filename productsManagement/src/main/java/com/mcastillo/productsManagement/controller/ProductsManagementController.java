@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 @RestController
@@ -18,29 +19,29 @@ public class ProductsManagementController {
 
 	private final ProductsManagementService productsManagementService;
 
-	public ProductsManagementController(ProductsManagementServiceImpl productsManagementService) {
+	public ProductsManagementController(ProductsManagementService productsManagementService) {
 		this.productsManagementService = productsManagementService;
 	}
 
 	@GetMapping("/products")
-	public ResponseEntity<String> getProducts() throws TimeoutException {
+	public ResponseEntity<List<Product>> getProducts() throws TimeoutException {
 		return ResponseEntity.ok(productsManagementService.getProducts());
 	}
 
 	@PostMapping("/products")
-	public ResponseEntity<String> createProduct(@RequestBody Product product) throws JsonProcessingException, TimeoutException {
-		String response = productsManagementService.createProduct(product);
+	public ResponseEntity<Product> createProduct(@RequestBody Product product) throws JsonProcessingException, TimeoutException {
+		Product response = productsManagementService.createProduct(product);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@PutMapping("/products/{id}")
-	public ResponseEntity<String> updateProduct(@PathVariable String id, @RequestBody Product product) throws JsonProcessingException, TimeoutException {
-		String response = productsManagementService.updateProduct(product);
+	public ResponseEntity<Product> updateProduct(@PathVariable String id, @RequestBody Product product) throws JsonProcessingException, TimeoutException {
+		Product response = productsManagementService.updateProduct(product);
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 
 	@DeleteMapping("/products/{id}")
-	public ResponseEntity<String> deleteProduct(@PathVariable int id) throws TimeoutException, JsonProcessingException {
+	public ResponseEntity<Void> deleteProduct(@PathVariable int id) throws TimeoutException, JsonProcessingException {
 		productsManagementService.deleteProduct(id);
 		return ResponseEntity.status(HttpStatus.NO_CONTENT).body(null);
 	}

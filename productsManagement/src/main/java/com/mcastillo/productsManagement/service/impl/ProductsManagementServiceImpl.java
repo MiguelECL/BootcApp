@@ -6,6 +6,8 @@ import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
 import com.mcastillo.productsManagement.service.ProductsManagementService;
@@ -15,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -48,7 +51,7 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		this.sqsRequester = sqsRequester;
 	}
 
-	public String getProducts() {
+	public List<Product> getProducts() {
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
@@ -63,13 +66,18 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 
 		try {
 			response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-			return response.getBody();
+			String responseString = response.getBody();
+			return objectMapper.readValue(responseString, new TypeReference<List<Product>>(){});
 		} catch (TimeoutException e){
 			throw new RuntimeException(e.getMessage(), e);
+		} catch (JsonMappingException e) {
+			throw new RuntimeException(e);
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
-	public String createProduct(Product product)  {
+	public Product createProduct(Product product)  {
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
@@ -86,8 +94,9 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		}
 
 		try{
-			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-			return objectMapper.writeValueAsString(product);
+			Message message = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+			String response = message.getBody();
+			return objectMapper.readValue(response, Product.class);
 		} catch (TimeoutException e) {
 			throw new RuntimeException(e.getMessage(), e);
 		} catch (JsonProcessingException e){
@@ -95,7 +104,7 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		}
 	}
 
-	public String updateProduct(Product product) {
+	public Product updateProduct(Product product) {
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
@@ -112,8 +121,9 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		}
 
 		try{
-			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
-			return objectMapper.writeValueAsString(product);
+			Message message = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+			String response = message.getBody();
+			return objectMapper.readValue(response, Product.class);
 		} catch (TimeoutException e) {
 			throw new RuntimeException(e.getMessage(), e);
 		} catch (JsonProcessingException e){
@@ -131,8 +141,6 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 				.withQueueUrl(queueURL)
 				.withMessageAttributes(messageAttributes)
 				.withMessageBody(String.valueOf(id));
-
-		Message response;
 
 		try{
 			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
