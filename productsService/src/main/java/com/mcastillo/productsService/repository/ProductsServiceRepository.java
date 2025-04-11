@@ -1,12 +1,14 @@
 package com.mcastillo.productsService.repository;
 
 import com.amazonaws.services.sqs.model.Message;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mcastillo.DatabaseException;
 import com.mcastillo.Product;
 import com.mcastillo.productsService.configuration.Queries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -96,24 +98,28 @@ public class ProductsServiceRepository {
                         logger.error("Error creating product!");
                     }
 
-                } catch (Exception e){
-                    logger.error("Error serializing product list:", e);
+                } catch (JsonProcessingException e) {
+	                throw new RuntimeException("Error creating product", e);
                 }
-                break;
+	            break;
 
             case "PUT":
                 // Deserialize the product from the message body
                 Product updatedProduct;
                 try {
                     updatedProduct = objectMapper.readValue(message.getBody(), Product.class);
-                    jdbcTemplate.update(queries.getUpdateProduct(),
+                    int rowsAffected = jdbcTemplate.update(queries.getUpdateProduct(),
                             updatedProduct.getName(),
                             updatedProduct.getDescription(),
                             updatedProduct.getPrice(),
                             updatedProduct.getExpirationDate(),
                             updatedProduct.getId());
 
-                    response = "Product updated: " + updatedProduct.getName();
+                    if (rowsAffected > 0){
+                        response = "Product updated: " + updatedProduct.getName();
+                    } else {
+                        response = "Failure to update from database";
+                    }
                 } catch (Exception e) {
                     logger.error("Error serializing product list:", e);
                 }
@@ -122,8 +128,13 @@ public class ProductsServiceRepository {
             case "DELETE":
                 int id = Integer.parseInt(message.getBody());
                 logger.info("Deleting product with id: {}", id);
-                jdbcTemplate.update(queries.getDeleteProduct(), id);
-                response = "Product deleted with id: " + id;
+                int rowsAffected = jdbcTemplate.update(queries.getDeleteProduct(), id);
+                if (rowsAffected > 0){
+                    response = "Product deleted with id: " + id;
+                } else {
+                    response = "Failure to delete from database";
+                    logger.info("Failure to delete from database");
+                }
                 break;
 
             default:

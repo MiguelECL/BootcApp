@@ -42,7 +42,7 @@ class ProductsManagementControllerTest {
       new Product(2, "Product 2", "Description 2", 20.0f, Date.valueOf("2023-4-8"))
     );
 
-    when(service.getProducts()).thenReturn(mockProducts.toString());
+    when(service.getProducts()).thenReturn(mockProducts);
 
     ResponseEntity<?> response = controller.getProducts();
 
@@ -62,13 +62,11 @@ class ProductsManagementControllerTest {
   void testCreateProduct() throws JsonProcessingException, TimeoutException {
     Product mockProduct = new Product (1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-4-12"));
 
-    ObjectMapper objectMapper = new ObjectMapper();
-    String expectedJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(mockProduct);
-    when(service.createProduct(mockProduct)).thenReturn(expectedJson);
+    when(service.createProduct(mockProduct)).thenReturn(mockProduct);
 
-    ResponseEntity<String> response = controller.createProduct(mockProduct);
+    ResponseEntity<Product> response = controller.createProduct(mockProduct);
     assertEquals(201, response.getStatusCodeValue());
-    assertEquals(expectedJson, response.getBody());
+    assertEquals(mockProduct, response.getBody());
 
   }
 
@@ -95,13 +93,12 @@ class ProductsManagementControllerTest {
     Product mockProduct = new Product (1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-4-12"));
 
     ObjectMapper objectMapper = new ObjectMapper();
-    String expectedJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(mockProduct);
 
-    when(service.updateProduct(mockProduct)).thenReturn(expectedJson);
-    ResponseEntity<String> response = controller.updateProduct("1", mockProduct);
+    when(service.updateProduct(mockProduct)).thenReturn(mockProduct);
+    ResponseEntity<Product> response = controller.updateProduct("1", mockProduct);
 
     assertEquals(200, response.getStatusCodeValue());
-    assertEquals(expectedJson, response.getBody());
+    assertEquals(mockProduct, response.getBody());
   }
 
   @Test

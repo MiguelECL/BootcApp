@@ -1,6 +1,7 @@
 package com.mcastillo.productsManagement.exception;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.mcastillo.DatabaseException;
 import com.mcastillo.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,5 +26,11 @@ public class ExceptionHandler {
 	public ResponseEntity<Response> handleJSONProcessingException(IllegalArgumentException e) {
 		logger.error("JsonProcessingException!", e);
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Response("JsonProcessing Exception"));
+	}
+
+	@org.springframework.web.bind.annotation.ExceptionHandler(DatabaseException.class)
+	public ResponseEntity<Response> handleDatabaseException(DatabaseException e){
+		logger.error("DatabaseException!", e);
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Response("Database Exception"));
 	}
 }

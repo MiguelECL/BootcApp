@@ -1,4 +1,4 @@
-package com.mcastillo.productsService.service;
+package com.mcastillo.productsService.service.impl;
 
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSResponder;
@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ProductsServiceServiceTest {
+public class ProductsServiceServiceImplTest {
 
 	@Mock
 	private AmazonSQS sqsClient;
@@ -38,14 +38,14 @@ public class ProductsServiceServiceTest {
 	@Mock
 	private ExecutorService executorService;
 
-	private ProductsServiceService serviceUnderTest;
+	private ProductsServiceServiceImpl serviceUnderTest;
 	private final String MOCK_QUEUE_URL = "https://sqs.example.com/12345/test-queue";
 
 	@BeforeEach
 	void setUp() {
 		MockitoAnnotations.openMocks(this);
 
-		serviceUnderTest = new ProductsServiceService(repository);
+		serviceUnderTest = new ProductsServiceServiceImpl(repository);
 
 		ReflectionTestUtils.setField(serviceUnderTest, "sqsClient", sqsClient);
 		ReflectionTestUtils.setField(serviceUnderTest, "sqsResponder", sqsResponder);
@@ -162,7 +162,7 @@ public class ProductsServiceServiceTest {
 
 	@Test
 	void pollQueueContinuously_ShouldContinuePollingUntilInterrupted() throws InterruptedException {
-		ProductsServiceService spy = spy(serviceUnderTest);
+		ProductsServiceServiceImpl spy = spy(serviceUnderTest);
 
 		doNothing().doNothing().doThrow(new RuntimeException("Stop the test"))
 				.when(spy).pollQueue();
@@ -173,7 +173,7 @@ public class ProductsServiceServiceTest {
 
 	@Test
 	void initializePolling_ShouldStartNewThread() throws InterruptedException {
-		ProductsServiceService spy = spy(serviceUnderTest);
+		ProductsServiceServiceImpl spy = spy(serviceUnderTest);
 
 		doNothing().when(spy).pollQueueContinuously();
 

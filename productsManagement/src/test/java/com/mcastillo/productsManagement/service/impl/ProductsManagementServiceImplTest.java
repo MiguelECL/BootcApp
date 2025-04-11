@@ -45,7 +45,7 @@ class ProductsManagementServiceImplTest {
   @BeforeEach
   void setUp(){
     // Initialize the service with the mocked AmazonSQSRequester
-    service = new ProductsManagementServiceImpl(queueURL, mockRequester);
+    service = new ProductsManagementServiceImpl();
     objectMapper = new ObjectMapper();
   }
 
@@ -105,9 +105,9 @@ class ProductsManagementServiceImplTest {
     Message mockResponse = new Message().withBody("Response");
     when(mockRequester.sendMessageAndGetResponse(mockRequest,0,TimeUnit.SECONDS)).thenReturn(mockResponse);
 
-    String response = service.createProduct(product);
+    Product response = service.createProduct(product);
 
-    assertEquals(objectMapper.writeValueAsString(product), response);
+    assertEquals(product, response);
 
   }
 
@@ -149,9 +149,9 @@ class ProductsManagementServiceImplTest {
     Message mockResponse = new Message().withBody("Response");
     when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenReturn(mockResponse);
 
-    String response = service.updateProduct(product);
+    Product response = service.updateProduct(product);
 
-    assertEquals(objectMapper.writeValueAsString(product), response);
+    assertEquals(product, response);
   }
 
   @Test

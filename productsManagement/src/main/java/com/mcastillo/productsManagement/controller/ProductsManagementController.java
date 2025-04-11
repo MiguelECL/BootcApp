@@ -3,7 +3,6 @@ package com.mcastillo.productsManagement.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mcastillo.Product;
 import com.mcastillo.productsManagement.service.ProductsManagementService;
-import com.mcastillo.productsManagement.service.impl.ProductsManagementServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,8 +11,6 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 @RestController
-// @CrossOrigin annotation not really needed anymore due to the fact that the frontend is now
-// being served by springboot
 @CrossOrigin
 public class ProductsManagementController {
 

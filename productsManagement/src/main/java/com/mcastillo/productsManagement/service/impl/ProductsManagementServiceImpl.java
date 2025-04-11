@@ -9,10 +9,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mcastillo.DatabaseException;
 import com.mcastillo.Product;
 import com.mcastillo.productsManagement.service.ProductsManagementService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -22,33 +21,21 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-///  This service sends messages through SQS to the products service.
 @Service
 public class ProductsManagementServiceImpl implements ProductsManagementService {
 
 	@Value("${sqs.timeout}")
-	private int TIMEOUT;
+	private int timeout;
 
 	@Value("${sqs.queue}")
 	private final String queueURL;
 
-	// AmazonSQSRequester is class that that allows for two-way communication with virtual queues
-	// It creates a temporary queue for each response
 	private final AmazonSQSRequester sqsRequester;
 	ObjectMapper objectMapper = new ObjectMapper();
 
-	Logger logger = LoggerFactory.getLogger(ProductsManagementServiceImpl.class);
-
-	//no args constructor
 	public ProductsManagementServiceImpl() {
 		this.queueURL = System.getenv("QUEUE_URL");
 		this.sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
-	}
-
-	// args constructor for testing
-	public ProductsManagementServiceImpl(String queueURL, AmazonSQSRequester sqsRequester) {
-		this.queueURL = queueURL;
-		this.sqsRequester = sqsRequester;
 	}
 
 	public List<Product> getProducts() {
@@ -65,13 +52,11 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		Message response;
 
 		try {
-			response = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+			response = sqsRequester.sendMessageAndGetResponse(request, timeout, TimeUnit.SECONDS);
 			String responseString = response.getBody();
 			return objectMapper.readValue(responseString, new TypeReference<List<Product>>(){});
 		} catch (TimeoutException e){
 			throw new RuntimeException(e.getMessage(), e);
-		} catch (JsonMappingException e) {
-			throw new RuntimeException(e);
 		} catch (JsonProcessingException e) {
 			throw new RuntimeException(e);
 		}
@@ -83,7 +68,8 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 				.withDataType("String")
 				.withStringValue("POST"));
 
-		SendMessageRequest request = null;
+		SendMessageRequest request;
+
 		try {
 			request = new SendMessageRequest()
 					.withQueueUrl(queueURL)
@@ -94,7 +80,7 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		}
 
 		try{
-			Message message = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+			Message message = sqsRequester.sendMessageAndGetResponse(request, timeout, TimeUnit.SECONDS);
 			String response = message.getBody();
 			return objectMapper.readValue(response, Product.class);
 		} catch (TimeoutException e) {
@@ -121,7 +107,7 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		}
 
 		try{
-			Message message = sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+			Message message = sqsRequester.sendMessageAndGetResponse(request, timeout, TimeUnit.SECONDS);
 			String response = message.getBody();
 			return objectMapper.readValue(response, Product.class);
 		} catch (TimeoutException e) {
@@ -143,7 +129,9 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 				.withMessageBody(String.valueOf(id));
 
 		try{
-			sqsRequester.sendMessageAndGetResponse(request, TIMEOUT, TimeUnit.SECONDS);
+			Message response = sqsRequester.sendMessageAndGetResponse(request, timeout, TimeUnit.SECONDS);
+			if (response.getBody().equals("Failure to delete from database"))
+				throw new DatabaseException("Database Exception");
 		} catch (TimeoutException e) {
 			throw new RuntimeException(e.getMessage(), e);
 		}
