@@ -114,7 +114,8 @@ public class ProductsServiceRepository {
                             updatedProduct.getId());
 
                     if (rowsAffected > 0){
-                        response = "Product updated: " + updatedProduct.getName();
+                        Product affectedProduct = new Product(updatedProduct.getId(), updatedProduct.getName(), updatedProduct.getDescription(), updatedProduct.getPrice(), updatedProduct.getExpirationDate());
+                        response = objectMapper.writeValueAsString(affectedProduct);
                     } else {
                         response = "Failure to update from database";
                         logger.info("Failure to update from database");
