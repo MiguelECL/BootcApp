@@ -43,9 +43,4 @@ public class ExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Response(e.getMessage()));
     }
 
-	@org.springframework.web.bind.annotation.ExceptionHandler(Exception.class)
-	public ResponseEntity<Response> handleException(Exception e){
-		logger.error("Exception!", e);
-		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body((new Response("Exception")));
-	}
 }

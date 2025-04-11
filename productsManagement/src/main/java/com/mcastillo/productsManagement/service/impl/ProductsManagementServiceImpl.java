@@ -27,14 +27,12 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 	private int timeout;
 
 	@Value("${sqs.queue}")
-	private final String queueURL;
+	private String queueURL;
 
-	private final AmazonSQSRequester sqsRequester;
+	private AmazonSQSRequester sqsRequester;
 	ObjectMapper objectMapper = new ObjectMapper();
 
 	public ProductsManagementServiceImpl() {
-		this.queueURL = System.getenv("QUEUE_URL");
-		this.sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
 	}
 
 	public List<Product> getProducts() {

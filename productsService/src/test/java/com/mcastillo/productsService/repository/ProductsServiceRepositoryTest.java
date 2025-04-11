@@ -13,8 +13,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
 import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -114,26 +118,88 @@ class ProductsServiceRepositoryTest {
 
 	@Test
 	void test_executeQuery_POST() throws JsonProcessingException {
-
 		Product product = new Product(1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-10-01"));
+		String jsonProduct = new ObjectMapper().writeValueAsString(product);
 
-		ObjectWriter mockWriter = mock(ObjectWriter.class);
-		when(objectMapper.writerWithDefaultPrettyPrinter()).thenReturn(mockWriter);
-		when(mockWriter.writeValueAsString(product)).thenReturn("mocked-json");
+		Map<String, Object> keys = new HashMap<>();
+		keys.put("id", 1);
 
-		when(objectMapper.readValue("mocked-json", Product.class)).thenReturn(product);
+		when(objectMapper.readValue(anyString(), eq(Product.class))).thenReturn(product);
+		when(objectMapper.writeValueAsString(any(Product.class))).thenReturn(jsonProduct);
+		when(queries.getCreateProduct()).thenReturn("INSERT INTO products (name, description, price, expiration_date) VALUES (?,?,?,?)");
+
+		PreparedStatement mockPs = mock(PreparedStatement.class);
+		java.sql.Connection mockConn = mock(java.sql.Connection.class);
+
+		try {
+			when(mockConn.prepareStatement(anyString(), anyInt())).thenReturn(mockPs);
+		} catch (SQLException e) {
+			fail("SQLException in test setup");
+		}
+
+		doAnswer(invocation -> {
+			PreparedStatementCreator psc = invocation.getArgument(0);
+			KeyHolder keyHolder = invocation.getArgument(1);
+
+			psc.createPreparedStatement(mockConn);
+
+			((GeneratedKeyHolder) keyHolder).getKeyList().add(keys);
+
+			return 1;
+		}).when(jdbcTemplate).update(any(PreparedStatementCreator.class), any(KeyHolder.class));
 
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
 				.withStringValue("POST"));
 
-		Message message = new Message().withMessageAttributes(messageAttributes)
-				.withBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+		Message message = new Message()
+				.withMessageAttributes(messageAttributes)
+				.withBody(jsonProduct);
 
 		String response = repository.executeQuery(message);
+		assertEquals(jsonProduct, response);
 
-		assertEquals("Product created: " + product.getName(), response);
+		try {
+			verify(mockPs).setString(1, product.getName());
+			verify(mockPs).setString(2, product.getDescription());
+			verify(mockPs).setFloat(3, product.getPrice());
+			verify(mockPs).setDate(4, product.getExpirationDate());
+		} catch (SQLException e) {
+			fail("SQLException during verification");
+		}
+
+		verify(jdbcTemplate).update(any(PreparedStatementCreator.class), any(KeyHolder.class));
+		verify(queries).getCreateProduct();
+	}
+
+	@Test
+	void test_executeQuery_POST_Failure() throws JsonProcessingException {
+		Product product = new Product(1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-10-01"));
+		String jsonProduct = new ObjectMapper().writeValueAsString(product);
+
+		when(objectMapper.readValue(anyString(), eq(Product.class))).thenReturn(product);
+
+		doAnswer(invocation -> {
+			KeyHolder keyHolder = invocation.getArgument(1);
+			return 1;
+		}).when(jdbcTemplate).update(any(PreparedStatementCreator.class), any(KeyHolder.class));
+
+		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+		messageAttributes.put("action", new MessageAttributeValue()
+				.withDataType("String")
+				.withStringValue("POST"));
+
+		Message message = new Message()
+				.withMessageAttributes(messageAttributes)
+				.withBody(jsonProduct);
+
+		String response = repository.executeQuery(message);
+		assertEquals("Error creating product", response);
+
+		verify(jdbcTemplate).update(any(PreparedStatementCreator.class), any(KeyHolder.class));
+		verify(objectMapper).readValue(anyString(), eq(Product.class));
+
 	}
 
 	@Test
@@ -152,32 +218,101 @@ class ProductsServiceRepositoryTest {
 
 		when(objectMapper.readValue(invalidJson, Product.class)).thenThrow(new JsonProcessingException("Error deserializing product from POST") {});
 
-		String response = repository.executeQuery(message);
-
-		assertEquals("Error deserializing product from POST", response);
+		assertThrows(RuntimeException.class, ()-> repository.executeQuery(message));
 	}
 
 	@Test
 	void test_executeQuery_PUT() throws JsonProcessingException {
 
+		// Setup test data
 		Product product = new Product(1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-10-01"));
+		String jsonProduct = new ObjectMapper().writeValueAsString(product);
 
-		ObjectWriter mockWriter = mock(ObjectWriter.class);
-		when(objectMapper.writerWithDefaultPrettyPrinter()).thenReturn(mockWriter);
-		when(mockWriter.writeValueAsString(product)).thenReturn("mocked-json");
+		// Mock dependencies
+		when(objectMapper.readValue(anyString(), eq(Product.class))).thenReturn(product);
+		when(objectMapper.writeValueAsString(any(Product.class))).thenReturn(jsonProduct);
+		when(queries.getUpdateProduct()).thenReturn("UPDATE products SET name=?, description=?, price=?, expiration_date=? WHERE id=?");
+		when(jdbcTemplate.update(
+				anyString(),
+				eq(product.getName()),
+				eq(product.getDescription()),
+				eq(product.getPrice()),
+				eq(product.getExpirationDate()),
+				eq(product.getId())
+		)).thenReturn(1);
 
-		when(objectMapper.readValue("mocked-json", Product.class)).thenReturn(product);
-
+		// Create test message
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("action", new MessageAttributeValue()
 				.withDataType("String")
 				.withStringValue("PUT"));
 
-		Message message = new Message().withMessageAttributes(messageAttributes)
-				.withBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+		Message message = new Message()
+				.withMessageAttributes(messageAttributes)
+				.withBody(jsonProduct);
 
+		// Execute and verify
 		String response = repository.executeQuery(message);
-		assertEquals("Product updated: " + product.getName(), response);
+		assertEquals(jsonProduct, response);
+
+		// Verify interactions
+		verify(jdbcTemplate).update(
+				anyString(),
+				eq(product.getName()),
+				eq(product.getDescription()),
+				eq(product.getPrice()),
+				eq(product.getExpirationDate()),
+				eq(product.getId())
+		);
+		verify(objectMapper).readValue(anyString(), eq(Product.class));
+		verify(objectMapper).writeValueAsString(any(Product.class));
+		verify(queries).getUpdateProduct();
+	}
+
+	@Test
+	void test_executeQuery_PUT_Failure() throws JsonProcessingException {
+
+		// Setup test data
+		Product product = new Product(1, "Product 1", "Description 1", 10.0f, Date.valueOf("2023-10-01"));
+		String jsonProduct = new ObjectMapper().writeValueAsString(product);
+
+		// Mock dependencies
+		when(objectMapper.readValue(anyString(), eq(Product.class))).thenReturn(product);
+		when(queries.getUpdateProduct()).thenReturn("UPDATE products SET name=?, description=?, price=?, expiration_date=? WHERE id=?");
+		when(jdbcTemplate.update(
+				anyString(),
+				eq(product.getName()),
+				eq(product.getDescription()),
+				eq(product.getPrice()),
+				eq(product.getExpirationDate()),
+				eq(product.getId())
+		)).thenReturn(0); // Return 0 to simulate no rows affected
+
+		// Create test message
+		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+		messageAttributes.put("action", new MessageAttributeValue()
+				.withDataType("String")
+				.withStringValue("PUT"));
+
+		Message message = new Message()
+				.withMessageAttributes(messageAttributes)
+				.withBody(jsonProduct);
+
+		// Execute and verify
+		String response = repository.executeQuery(message);
+		assertEquals("Failure to update from database", response);
+
+		// Verify interactions
+		verify(jdbcTemplate).update(
+				anyString(),
+				eq(product.getName()),
+				eq(product.getDescription()),
+				eq(product.getPrice()),
+				eq(product.getExpirationDate()),
+				eq(product.getId())
+		);
+		verify(objectMapper).readValue(anyString(), eq(Product.class));
+		verify(queries).getUpdateProduct();
 	}
 
 	@Test
@@ -196,7 +331,7 @@ class ProductsServiceRepositoryTest {
 
 		String response = repository.executeQuery(message);
 
-		assertEquals("Error deserializing product from PUT", response);
+		assertEquals("Error serializing product list", response);
 	}
 
 	@Test
@@ -207,13 +342,40 @@ class ProductsServiceRepositoryTest {
 				.withDataType("String")
 				.withStringValue("DELETE"));
 
-		Message message = new Message().withMessageAttributes(messageAttributes)
+		Message message = new Message()
+				.withMessageAttributes(messageAttributes)
 				.withBody("2");
+
+		when(queries.getDeleteProduct()).thenReturn("DELETE FROM products WHERE id = ?");
+		when(jdbcTemplate.update(anyString(), eq(2))).thenReturn(1);
 
 		String response = repository.executeQuery(message);
 
-		repository.executeQuery(message);
 		assertEquals("Product deleted with id: 2", response);
+		verify(jdbcTemplate).update(anyString(), eq(2));
+		verify(queries).getDeleteProduct();
+	}
+
+	@Test
+	void test_executeQuery_DELETE_failure(){
+
+		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+		messageAttributes.put("action", new MessageAttributeValue()
+				.withDataType("String")
+				.withStringValue("DELETE"));
+
+		Message message = new Message()
+				.withMessageAttributes(messageAttributes)
+				.withBody("2");
+
+		when(queries.getDeleteProduct()).thenReturn("DELETE FROM products WHERE id = ?");
+		when(jdbcTemplate.update(anyString(), eq(2))).thenReturn(0);
+
+		String response = repository.executeQuery(message);
+
+		assertEquals("Failure to delete from database", response);
+		verify(jdbcTemplate).update(anyString(), eq(2));
+		verify(queries).getDeleteProduct();
 	}
 
 	@Test

@@ -172,6 +172,20 @@ public class ProductsServiceServiceImplTest {
 	}
 
 	@Test
+	void pollQueueContinuously_ShouldStopPollingWhenInterrupted() throws InterruptedException {
+		ProductsServiceServiceImpl spy = spy(serviceUnderTest);
+
+		doAnswer(invocation -> {
+			Thread.currentThread().interrupt(); // Set interrupt flag
+			return null;
+		}).when(spy).pollQueue();
+
+		spy.pollQueueContinuously();
+
+		verify(spy, times(1)).pollQueue();
+	}
+
+	@Test
 	void initializePolling_ShouldStartNewThread() throws InterruptedException {
 		ProductsServiceServiceImpl spy = spy(serviceUnderTest);
 

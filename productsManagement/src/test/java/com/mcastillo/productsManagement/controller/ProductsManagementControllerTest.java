@@ -47,7 +47,7 @@ class ProductsManagementControllerTest {
     ResponseEntity<?> response = controller.getProducts();
 
     assertEquals(200, response.getStatusCodeValue());
-    assertEquals(mockProducts.toString(), response.getBody());
+    assertEquals(mockProducts.toString(), response.getBody().toString());
 
   }
 

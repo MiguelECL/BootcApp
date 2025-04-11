@@ -33,7 +33,6 @@ public class ProductsServiceRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    // Custom row mapper
     public static class ProductRowMapper implements RowMapper<Product> {
         @Override
         public Product mapRow(ResultSet rs, int row) throws SQLException {
@@ -89,10 +88,10 @@ public class ProductsServiceRepository {
 
                     if (keys != null) {
                         int id = (int) keys.get("id");
-                        System.out.println("NOT NULL");
                         createdProduct = new Product(id, product.getName(), product.getDescription(), product.getPrice(), product.getExpirationDate());
                         response = objectMapper.writeValueAsString(createdProduct);
                     } else {
+                        response = "Error creating product";
                         logger.error("Error creating product!");
                     }
 
@@ -121,7 +120,8 @@ public class ProductsServiceRepository {
                         logger.info("Failure to update from database");
                     }
                 } catch (Exception e) {
-                    logger.error("Error serializing product list:", e);
+                    response = "Error serializing product list";
+                    logger.error("Error serializing product list", e);
                 }
                 break;
 
@@ -139,6 +139,7 @@ public class ProductsServiceRepository {
 
             default:
                 logger.info("Action not supported");
+                response = "Action not supported";
                 break;
         }
 
