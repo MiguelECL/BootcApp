@@ -5,6 +5,7 @@ import com.amazonaws.services.sqs.model.Message;
 import com.mcastillo.productsService.service.ProductsServiceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
@@ -20,7 +21,8 @@ public class ProductsServiceServiceImpl implements ProductsServiceService {
 
     private final Logger logger = LoggerFactory.getLogger(ProductsServiceServiceImpl.class);
 
-    private final String queueURL;
+    @Value("${sqs.queue}")
+    private String queueURL;
     private final AmazonSQS sqsClient;
     private final AmazonSQSResponder sqsResponder;
     private final ProductsServiceRepository repository;
@@ -30,7 +32,6 @@ public class ProductsServiceServiceImpl implements ProductsServiceService {
         this.repository = repository;
         this.sqsClient = AmazonSQSClientBuilder.defaultClient();
         this.sqsResponder = AmazonSQSResponderClientBuilder.defaultClient();
-        this.queueURL = System.getenv("QUEUE_URL");
         this.executorService = Executors.newFixedThreadPool(10);
     }
 

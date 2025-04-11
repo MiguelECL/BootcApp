@@ -9,16 +9,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.DatabaseException;
 import com.mcastillo.Product;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.Date;
-import java.sql.Time;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -39,11 +40,18 @@ class ProductsManagementServiceImplTest {
   @Mock
   ObjectMapper objectMapper;
 
-  @InjectMocks
   private ProductsManagementServiceImpl service;
 
   @Value("${sqs.timeout}")
   private int TIMEOUT;
+
+  @BeforeEach
+  void Setup(){
+    MockitoAnnotations.openMocks(this);
+    service = new ProductsManagementServiceImpl();
+    ReflectionTestUtils.setField(service, "sqsRequester",mockRequester);
+    ReflectionTestUtils.setField(service, "objectMapper", objectMapper);
+  }
 
   @Test
   void test_getProducts() throws TimeoutException {
@@ -265,12 +273,15 @@ class ProductsManagementServiceImplTest {
   }
 
   @Test
-  void test_updateProduct_SerializationException() throws JsonProcessingException {
+  void test_updateProduct_SerializationException() throws JsonProcessingException, TimeoutException {
     Product product = new Product(1, "test_product", "test_description", 10.0f, Date.valueOf("2023-10-01"));
 
     when(objectMapper.writeValueAsString(product)).thenThrow(new JsonProcessingException("") {});
 
     assertThrows(IllegalArgumentException.class, () -> service.updateProduct(product));
+
+    verify(objectMapper).writeValueAsString(product);
+    verifyNoInteractions(mockRequester);
   }
 
   @Test

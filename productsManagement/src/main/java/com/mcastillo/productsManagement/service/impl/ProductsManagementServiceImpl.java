@@ -1,6 +1,7 @@
 package com.mcastillo.productsManagement.service.impl;
 
 import com.amazonaws.services.sqs.AmazonSQSRequester;
+import com.amazonaws.services.sqs.AmazonSQSRequesterClientBuilder;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
@@ -28,10 +29,11 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 	@Value("${sqs.queue}")
 	private String queueURL;
 
-	private AmazonSQSRequester sqsRequester;
+	private final AmazonSQSRequester sqsRequester;
 	ObjectMapper objectMapper = new ObjectMapper();
 
 	public ProductsManagementServiceImpl() {
+		this.sqsRequester = AmazonSQSRequesterClientBuilder.defaultClient();
 	}
 
 	public List<Product> getProducts() {

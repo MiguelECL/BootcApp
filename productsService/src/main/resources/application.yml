@@ -10,3 +10,6 @@ queries:
   createProduct: "INSERT INTO products (name, description, price, expiration_date) VALUES (?, ?, ?, ?)"
   updateProduct: "UPDATE products SET name = ?, description = ?, price = ?, expiration_date = ? WHERE id = ?"
   deleteProduct: "DELETE FROM products WHERE id = ?"
+
+sqs:
+  queue: ${QUEUE_URL:test}
