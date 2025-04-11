@@ -126,7 +126,6 @@ class ProductsManagementServiceImplTest {
             .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
 
     Message mockResponse = new Message().withBody("Response");
-    when(mockRequester.sendMessageAndGetResponse(mockRequest,0,TimeUnit.SECONDS)).thenThrow(new TimeoutException("Error"));
 
     assertThrows(RuntimeException.class, ()-> service.createProduct(product));
 

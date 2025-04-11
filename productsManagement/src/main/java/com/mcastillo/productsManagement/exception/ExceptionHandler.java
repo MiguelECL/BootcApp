@@ -31,6 +31,6 @@ public class ExceptionHandler {
 	@org.springframework.web.bind.annotation.ExceptionHandler(DatabaseException.class)
 	public ResponseEntity<Response> handleDatabaseException(DatabaseException e){
 		logger.error("DatabaseException!", e);
-		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Response("Database Exception"));
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Response(e.getMessage()));
 	}
 }
