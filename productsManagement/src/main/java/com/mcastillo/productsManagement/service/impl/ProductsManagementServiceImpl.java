@@ -1,7 +1,6 @@
 package com.mcastillo.productsManagement.service.impl;
 
 import com.amazonaws.services.sqs.AmazonSQSRequester;
-import com.amazonaws.services.sqs.AmazonSQSRequesterClientBuilder;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
