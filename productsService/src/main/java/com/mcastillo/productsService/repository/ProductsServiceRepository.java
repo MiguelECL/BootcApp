@@ -2,9 +2,7 @@ package com.mcastillo.productsService.repository;
 
 import com.amazonaws.services.sqs.model.Message;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mcastillo.DatabaseException;
 import com.mcastillo.Product;
 import com.mcastillo.productsService.configuration.Queries;
 import org.slf4j.Logger;
@@ -119,6 +117,7 @@ public class ProductsServiceRepository {
                         response = "Product updated: " + updatedProduct.getName();
                     } else {
                         response = "Failure to update from database";
+                        logger.info("Failure to update from database");
                     }
                 } catch (Exception e) {
                     logger.error("Error serializing product list:", e);

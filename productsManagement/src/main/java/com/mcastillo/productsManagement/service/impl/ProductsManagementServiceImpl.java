@@ -107,9 +107,12 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		}
 
 		try{
-			Message message = sqsRequester.sendMessageAndGetResponse(request, timeout, TimeUnit.SECONDS);
-			String response = message.getBody();
-			return objectMapper.readValue(response, Product.class);
+			Message response = sqsRequester.sendMessageAndGetResponse(request, timeout, TimeUnit.SECONDS);
+			if (response.getBody().equals("Failure to update from database")){
+				throw new DatabaseException("Failure to update from database");
+			} else {
+				return objectMapper.readValue(response.getBody(), Product.class);
+			}
 		} catch (TimeoutException e) {
 			throw new RuntimeException(e.getMessage(), e);
 		} catch (JsonProcessingException e){
@@ -131,7 +134,7 @@ public class ProductsManagementServiceImpl implements ProductsManagementService 
 		try{
 			Message response = sqsRequester.sendMessageAndGetResponse(request, timeout, TimeUnit.SECONDS);
 			if (response.getBody().equals("Failure to delete from database"))
-				throw new DatabaseException("Database Exception");
+				throw new DatabaseException("Failure to delete from database");
 		} catch (TimeoutException e) {
 			throw new RuntimeException(e.getMessage(), e);
 		}
