@@ -1,5 +1,6 @@
-package com.mcastillo.productsManagement.service;
+package com.mcastillo.productsManagement.service.impl;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.sqs.AmazonSQSRequester;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
@@ -7,6 +8,7 @@ import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcastillo.Product;
+import com.mcastillo.productsManagement.service.ProductsManagementService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
 
 import java.sql.Date;
 import java.util.HashMap;
@@ -27,14 +28,14 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @SpringBootTest
-class ProductsManagementServiceTest {
+class ProductsManagementServiceImplTest {
 
   private static final String queueURL = "test_queue_url";
 
   @Mock
   AmazonSQSRequester mockRequester;
 
-  ProductsManagementService service;
+  private ProductsManagementService service;
 
   ObjectMapper objectMapper;
 
@@ -44,7 +45,7 @@ class ProductsManagementServiceTest {
   @BeforeEach
   void setUp(){
     // Initialize the service with the mocked AmazonSQSRequester
-    service = new ProductsManagementService(queueURL, mockRequester);
+    service = new ProductsManagementServiceImpl();
     objectMapper = new ObjectMapper();
   }
 
@@ -69,6 +70,25 @@ class ProductsManagementServiceTest {
   }
 
   @Test
+  void test_getProducts_Exception() throws TimeoutException {
+
+    Map<String, MessageAttributeValue> mockMessageAttributes = new HashMap<>();
+    mockMessageAttributes.put("action", new MessageAttributeValue()
+            .withDataType("String")
+            .withStringValue("GET"));
+
+    SendMessageRequest mockRequest = new SendMessageRequest()
+            .withQueueUrl(queueURL)
+            .withMessageAttributes(mockMessageAttributes)
+            .withMessageBody("GET PRODUCTS");
+
+    Message mockResponse = new Message().withBody("Response");
+    when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenThrow(new TimeoutException("Error"));
+
+    assertThrows(RuntimeException.class, ()-> service.getProducts());
+  }
+
+  @Test
   void test_createProduct() throws JsonProcessingException, TimeoutException {
     Product product = new Product(1, "test_product", "test_description", 10.0f, Date.valueOf("2023-10-01"));
 
@@ -80,14 +100,34 @@ class ProductsManagementServiceTest {
     SendMessageRequest mockRequest = new SendMessageRequest()
       .withQueueUrl(queueURL)
       .withMessageAttributes(messageAttributes)
-      .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+      .withMessageBody(objectMapper.writeValueAsString(product));
 
     Message mockResponse = new Message().withBody("Response");
     when(mockRequester.sendMessageAndGetResponse(mockRequest,0,TimeUnit.SECONDS)).thenReturn(mockResponse);
 
-    service.createProduct(product);
+    Product response = service.createProduct(product);
 
-    assertEquals("Response", mockResponse.getBody());
+    assertEquals(product, response);
+
+  }
+
+  @Test
+  void test_createProduct_Exception() throws JsonProcessingException, TimeoutException {
+    Product product = new Product(1, "test_product", "test_description", 10.0f, Date.valueOf("2023-10-01"));
+
+    Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+    messageAttributes.put("action", new MessageAttributeValue()
+            .withDataType("String")
+            .withStringValue("POST"));
+
+    SendMessageRequest mockRequest = new SendMessageRequest()
+            .withQueueUrl(queueURL)
+            .withMessageAttributes(messageAttributes)
+            .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+
+    Message mockResponse = new Message().withBody("Response");
+
+    assertThrows(RuntimeException.class, ()-> service.createProduct(product));
 
   }
 
@@ -103,18 +143,38 @@ class ProductsManagementServiceTest {
     SendMessageRequest mockRequest = new SendMessageRequest()
       .withQueueUrl(queueURL)
       .withMessageAttributes(messageAttributes)
-      .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+      .withMessageBody(objectMapper.writeValueAsString(product));
 
     Message mockResponse = new Message().withBody("Response");
     when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenReturn(mockResponse);
 
-    service.updateProduct(product);
+    Product response = service.updateProduct(product);
 
-    assertEquals("Response", mockResponse.getBody());
+    assertEquals(product, response);
   }
 
   @Test
-  void test_deleteProduct() throws TimeoutException {
+  void test_updateProductException() throws JsonProcessingException, TimeoutException {
+    Product product = new Product(1, "test_product", "test_description", 10.0f, Date.valueOf("2023-10-01"));
+
+    Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+    messageAttributes.put("action", new MessageAttributeValue()
+            .withDataType("String")
+            .withStringValue("PUT"));
+
+    SendMessageRequest mockRequest = new SendMessageRequest()
+            .withQueueUrl(queueURL)
+            .withMessageAttributes(messageAttributes)
+            .withMessageBody(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(product));
+
+    when(mockRequester.sendMessageAndGetResponse(mockRequest, 0, TimeUnit.SECONDS)).thenThrow(new TimeoutException("Error"));
+
+    assertThrows(RuntimeException.class, ()->service.updateProduct(product));
+
+  }
+
+  @Test
+  void test_deleteProduct() throws TimeoutException, JsonProcessingException {
     int id = 1;
     Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
     messageAttributes.put("action", new MessageAttributeValue()
@@ -133,4 +193,22 @@ class ProductsManagementServiceTest {
     assertEquals("Response",mockResponse.getBody());
   }
 
+  @Test
+  void test_deleteProduct_Exception() throws TimeoutException, JsonProcessingException {
+    int id = 1;
+    Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+    messageAttributes.put("action", new MessageAttributeValue()
+            .withDataType("String")
+            .withStringValue("DELETE"));
+
+    SendMessageRequest request = new SendMessageRequest()
+            .withQueueUrl(queueURL)
+            .withMessageAttributes(messageAttributes)
+            .withMessageBody(String.valueOf(id));
+
+    when(mockRequester.sendMessageAndGetResponse(request,0, TimeUnit.SECONDS)).thenThrow(new TimeoutException("Error"));
+
+    assertThrows(RuntimeException.class, ()-> service.deleteProduct(id));
+
+  }
 }

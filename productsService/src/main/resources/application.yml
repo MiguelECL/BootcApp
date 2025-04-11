@@ -1,0 +1,12 @@
+spring:
+  datasource:
+   url: "jdbc:postgresql://${DB_HOST:localhost}:5432/productdatabase"
+   username: "postgres"
+   password: "postgres"
+   driver-class-name: "org.postgresql.Driver"
+
+queries:
+  selectAllProducts: "SELECT * FROM products"
+  createProduct: "INSERT INTO products (name, description, price, expiration_date) VALUES (?, ?, ?, ?)"
+  updateProduct: "UPDATE products SET name = ?, description = ?, price = ?, expiration_date = ? WHERE id = ?"
+  deleteProduct: "DELETE FROM products WHERE id = ?"

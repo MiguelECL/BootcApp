@@ -6,4 +6,5 @@ server:
   port: 7643
 
 sqs:
+  queue: ${QUEUE_URL:test}
   timeout: 5
