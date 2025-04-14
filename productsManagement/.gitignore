@@ -20,7 +20,6 @@ target/
 *.ipr
 .env
 
-
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/

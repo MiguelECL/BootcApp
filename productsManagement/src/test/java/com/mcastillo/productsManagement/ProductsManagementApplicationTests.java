@@ -8,6 +8,7 @@ class ProductsManagementApplicationTests {
 
 	@Test
 	void contextLoads() {
+		ProductsManagementApplication.main(new String[]{});
 	}
 
 }
