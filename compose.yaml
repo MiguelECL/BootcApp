@@ -1,0 +1,41 @@
+services:
+  management:
+    build: ./productsManagement/.
+    container_name: management_service
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - QUEUE_URL=${QUEUE_URL}
+      - AWS_REGION=${AWS_REGION}
+    ports:
+      - 7643:7643
+
+  service:
+    build: ./productsService/.
+    container_name: product_service
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - QUEUE_URL=${QUEUE_URL}
+      - AWS_REGION=${AWS_REGION}
+      - DB_HOST=db
+    ports:
+      - 7642:7642
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    container_name: pg_container
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: productdatabase
+    ports:
+      - 5432:5432
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  pg_data:
